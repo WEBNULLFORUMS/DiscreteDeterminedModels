@@ -16,7 +16,12 @@
         </div>
         <span class="logo-text">AlgoLab</span>
       </div>
-      <nav class="nav">
+      <button class="hamburger" id="hamburgerBtn" aria-label="Меню">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <nav class="nav" id="mobileMenu">
         <a href="#" class="nav-link" data-page="landing">Главная</a>
         <a href="#" class="nav-link" data-page="dashboard">Исследование</a>
         <a href="#" class="nav-link" data-page="glossary">Глоссарий</a>
@@ -98,7 +103,7 @@
                   </div>
                 </div>
               </div>
-              <div class="service-content">
+              <div class="service-content" >
                 <div class="service-badge">Google Photos</div>
                 <h3 class="service-name">Матричная инверсия</h3>
                 <p class="service-description">
@@ -403,6 +408,11 @@
           <div class="canvas-header">
             <h2 id="canvasTitle">Рабочая область</h2>
             <div class="canvas-controls">
+              <button class="btn btn-icon" id="backButtonMobile" title="Назад" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+              </button>
               <button class="btn btn-icon" id="undoMove" title="Отменить ход">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 10h10a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H3"/>

@@ -462,18 +462,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ===== Navigation =====
 function initNavigation() {
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+
+  if (!hamburgerBtn || !mobileMenu) {
+    return;
+  }
+
+  // Toggle menu
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    hamburgerBtn.classList.toggle('active');
+    mobileMenu.classList.toggle('active');
+  });
+
+  // Close menu on link click
   navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const page = link.dataset.page;
       navigateTo(page);
+      hamburgerBtn.classList.remove('active');
+      mobileMenu.classList.remove('active');
     });
   });
 
-  document.getElementById('startSession').addEventListener('click', () => {
-    navigateTo('dashboard');
-    state.sessionStart = Date.now();
-    saveToStorage();
+  // Start session button
+  const startSessionBtn = document.getElementById('startSession');
+  if (startSessionBtn) {
+    startSessionBtn.addEventListener('click', () => {
+      navigateTo('dashboard');
+      state.sessionStart = Date.now();
+      saveToStorage();
+      hamburgerBtn.classList.remove('active');
+      mobileMenu.classList.remove('active');
+    });
+  }
+
+  // Close on ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hamburgerBtn.classList.remove('active');
+      mobileMenu.classList.remove('active');
+    }
+  });
+
+  // Add click handler for landing page service cards
+  const landingServiceCards = document.querySelectorAll('#landing .service-card[data-service]');
+  landingServiceCards.forEach(card => {
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => {
+      const service = card.getAttribute('data-service');
+      navigateTo('dashboard');
+      state.sessionStart = Date.now();
+      saveToStorage();
+      hamburgerBtn.classList.remove('active');
+      mobileMenu.classList.remove('active');
+    });
   });
 }
 
@@ -709,9 +754,23 @@ function initMatrixGame(container, difficulty = 'medium') {
   logTerminal(`[SYSTEM]: Матрица ${size}x${size}`, 'info');
   const matrix = buildMatrixPuzzle(size, difficulty);
   
+  // Calculate cell size based on screen width - larger on mobile
+  let cellSize, gap;
+  if (window.innerWidth <= 480) {
+    cellSize = 60;
+    gap = 3;
+  } else if (window.innerWidth <= 768) {
+    cellSize = 65;
+    gap = 4;
+  } else {
+    cellSize = 85;
+    gap = 8;
+  }
+  
   const grid = document.createElement('div');
   grid.className = 'matrix-grid';
-  grid.style.gridTemplateColumns = `repeat(${size}, 70px)`;
+  grid.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
+  grid.style.gap = `${gap}px`;
   
   // Render grid
   for (let i = 0; i < size; i++) {
@@ -721,6 +780,8 @@ function initMatrixGame(container, difficulty = 'medium') {
       cell.textContent = matrix[i][j];
       cell.dataset.row = i;
       cell.dataset.col = j;
+      cell.style.width = `${cellSize}px`;
+      cell.style.height = `${cellSize}px`;
       
       cell.addEventListener('click', () => {
         const currentMatrix = container.matrixData.matrix;
@@ -741,9 +802,23 @@ function restoreMatrixGame(container, save) {
   const size = save.size;
   const matrix = save.matrix.map(row => [...row]);
   
+  // Calculate cell size based on screen width - larger on mobile
+  let cellSize, gap;
+  if (window.innerWidth <= 480) {
+    cellSize = 60;
+    gap = 3;
+  } else if (window.innerWidth <= 768) {
+    cellSize = 65;
+    gap = 4;
+  } else {
+    cellSize = 85;
+    gap = 8;
+  }
+  
   const grid = document.createElement('div');
   grid.className = 'matrix-grid';
-  grid.style.gridTemplateColumns = `repeat(${size}, 70px)`;
+  grid.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
+  grid.style.gap = `${gap}px`;
 
   for (let i = 0; i < size; i++) {
     for (let j = 0; j < size; j++) {
@@ -752,6 +827,8 @@ function restoreMatrixGame(container, save) {
       cell.textContent = matrix[i][j];
       cell.dataset.row = i;
       cell.dataset.col = j;
+      cell.style.width = `${cellSize}px`;
+      cell.style.height = `${cellSize}px`;
 
       cell.addEventListener('click', () => {
         const currentMatrix = container.matrixData.matrix;
@@ -1579,6 +1656,14 @@ function initWorkspace() {
   document.getElementById('backToDashboard').addEventListener('click', () => {
     navigateTo('dashboard');
   });
+
+  // Back button mobile
+  const backMobileBtn = document.getElementById('backButtonMobile');
+  if (backMobileBtn) {
+    backMobileBtn.addEventListener('click', () => {
+      navigateTo('dashboard');
+    });
+  }
   
   // Undo button
   document.getElementById('undoMove').addEventListener('click', () => {
