@@ -1429,6 +1429,11 @@ body {
   position: relative;
   width: 420px;
   height: 420px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.5s ease;
 }
 
 .ring {
@@ -1441,6 +1446,8 @@ body {
 
 .ring:hover {
   border-color: var(--accent-primary);
+  filter: brightness(1.2);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
 }
 
 .ring-sector {
@@ -2264,6 +2271,165 @@ body {
   to { transform: translateX(0); opacity: 1; }
 }
 
+/* Large screens (> 1200px) */
+@media (min-width: 1201px) {
+  .rings-container {
+    width: 520px !important;
+    height: 520px !important;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .rings-container {
+    width: 300px !important;
+    height: 300px !important;
+  }
+  
+  .ring {
+    border-width: 2px;
+  }
+  
+  .ring-target {
+    width: 38px;
+    height: 38px;
+    border-width: 2px;
+    font-size: 0.52rem;
+  }
+}
+
+/* ===== Help Modal ===== */
+.help-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.help-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 60px rgba(0, 0, 0, 0.5);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: modalAppear 0.3s ease;
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.help-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.help-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.help-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.help-modal-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.help-modal-content {
+  padding: 1.5rem;
+}
+
+.help-modal-content h3 {
+  color: var(--accent-primary);
+  margin: 1rem 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.help-modal-content p {
+  color: var(--text-secondary);
+  margin: 0.5rem 0 1rem 0;
+  line-height: 1.6;
+}
+
+.help-modal-content ol {
+  color: var(--text-secondary);
+  margin: 0.5rem 0 1rem 1.5rem;
+  line-height: 1.8;
+}
+
+.help-modal-content li {
+  margin: 0.5rem 0;
+}
+
+.help-modal-content strong {
+  color: var(--accent-primary);
+}
+
+.help-modal-content .help-goal {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-primary);
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  margin: 1rem 0;
+}
+
+.help-modal-content .help-goal strong {
+  color: var(--text-primary);
+}
+
+.help-modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 1200px) {
   .cards-grid {
@@ -2299,6 +2465,22 @@ body {
   
   .cards-grid {
     grid-template-columns: 1fr;
+  }
+  
+  /* Rings responsive for tablets */
+  .rings-container {
+    width: 400px !important;
+    height: 400px !important;
+  }
+  
+  .ring {
+    border-width: 3px;
+  }
+  
+  .ring-target {
+    width: 45px;
+    height: 45px;
+    font-size: 0.6rem;
   }
 }
 
@@ -2366,8 +2548,19 @@ body {
   }
   
   .rings-container {
-    width: 300px;
-    height: 300px;
+    width: 340px !important;
+    height: 340px !important;
+  }
+  
+  .ring {
+    border-width: 3px;
+  }
+  
+  .ring-target {
+    width: 40px;
+    height: 40px;
+    border-width: 2px;
+    font-size: 0.55rem;
   }
 
   /* Canvas Adaptive for tablets */
@@ -2453,6 +2646,29 @@ body {
 
   #backButtonMobile {
     display: flex !important;
+  }
+  
+  /* Rings responsive for small screens */
+  .rings-container {
+    width: 260px !important;
+    height: 260px !important;
+  }
+  
+  .ring {
+    border-width: 2px;
+  }
+  
+  .ring-target {
+    width: 35px;
+    height: 35px;
+    border-width: 2px;
+    font-size: 0.5rem;
+  }
+  
+  .ring-indicator {
+    top: -25px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6rem;
   }
 }
 

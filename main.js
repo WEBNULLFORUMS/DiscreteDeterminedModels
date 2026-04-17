@@ -31,6 +31,11 @@ const state = {
     speed: 0,
     logic: 0,
     algorithmic: 0
+  },
+  helpShown: {
+    matrix: false,
+    rings: false,
+    graph: false
   }
 };
 
@@ -745,6 +750,15 @@ function startModel(modelType, restore = false, showModal = false) {
   logTerminal('[SYSTEM]: Модель готова', 'success');
   logTerminal(`[SERVICE]: ${service.textName}`, 'info');
   logTerminal('[INFO]: Начните взаимодействие');
+  
+  // Show help modal on first launch (unless restore)
+  if (!restore && !state.helpShown[modelType]) {
+    state.helpShown[modelType] = true;
+    setTimeout(() => {
+      showHelpModal(modelType);
+    }, 500);
+  }
+  
   saveToStorage();
 }
 
@@ -1072,10 +1086,13 @@ function initRingsGame(container, difficulty = 'medium') {
   const colors = ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b'];
   const names = ['Внешнее', 'Среднее', 'Внутреннее', 'Центральное'];
   
+  // Use responsive sizing via data attribute (CSS will handle responsive sizing)
+  ringsContainer.dataset.difficulty = difficulty;
+  
   const rings = [];
   for (let i = 0; i < numRings; i++) {
     rings.push({
-      radius: 190 - i * 45,
+      radius: 200 - i * 48,
       sectors: sectors[i],
       rotation: 0,
       color: colors[i],
@@ -1170,17 +1187,29 @@ function createRingElement(ringData, index, allRings, container) {
   ring.style.transform = `rotate(${ringData.rotation}deg)`;
   ring.dataset.index = index;
   
+  // Adaptive marker size based on radius
+  let markerSize = 24;
+  let markerBoxShadow = '0 0 15px';
+  
+  if (ringData.radius < 100) {
+    markerSize = 18;
+    markerBoxShadow = '0 0 10px';
+  } else if (ringData.radius < 150) {
+    markerSize = 20;
+    markerBoxShadow = '0 0 12px';
+  }
+  
   // Main marker (bright dot at top when rotation=0)
   const marker = document.createElement('div');
   marker.style.cssText = `
     position: absolute;
-    width: 24px;
-    height: 24px;
+    width: ${markerSize}px;
+    height: ${markerSize}px;
     background: ${ringData.color};
     border-radius: 50%;
-    top: -12px;
-    left: calc(50% - 12px);
-    box-shadow: 0 0 15px ${ringData.color};
+    top: -${markerSize / 2}px;
+    left: calc(50% - ${markerSize / 2}px);
+    box-shadow: ${markerBoxShadow} ${ringData.color};
   `;
   ring.appendChild(marker);
   
@@ -1650,6 +1679,43 @@ function handleWin(modelType) {
   navigateTo('statistics');
 }
 
+// ===== Help Modal Functions =====
+function showHelpModal(modelType) {
+  const modelInfo = modelInstructions[modelType];
+  if (!modelInfo) return;
+  
+  const modalTitle = document.getElementById('helpModalTitle');
+  const modalContent = document.getElementById('helpModalContent');
+  const serviceNames = {
+    matrix: 'Google Photos',
+    rings: 'Spotify / YouTube',
+    graph: 'Kaspi.kz'
+  };
+  
+  modalTitle.textContent = modelInfo.title;
+  
+  modalContent.innerHTML = `
+    <h3>Сервис: ${serviceNames[modelType]}</h3>
+    <p>${modelInfo.goal}</p>
+    
+    <h3>Как играть:</h3>
+    ${modelInfo.howTo}
+    
+    <div class="help-goal">
+      <strong>📌 Совет:</strong><br>
+      ${modelInfo.goalNote}
+    </div>
+  `;
+  
+  const overlay = document.getElementById('helpModalOverlay');
+  overlay.classList.add('active');
+}
+
+function closeHelpModal() {
+  const overlay = document.getElementById('helpModalOverlay');
+  overlay.classList.remove('active');
+}
+
 // ===== Workspace Utilities =====
 function initWorkspace() {
   // Back button
@@ -1720,7 +1786,22 @@ function initWorkspace() {
       showToast('Выберите модель, чтобы получить справку.', 'info');
       return;
     }
-    // Help modal removed
+    showHelpModal(state.currentModel);
+  });
+  
+  // Help modal close handlers
+  document.getElementById('helpModalClose').addEventListener('click', () => {
+    closeHelpModal();
+  });
+  
+  document.getElementById('helpModalOK').addEventListener('click', () => {
+    closeHelpModal();
+  });
+  
+  document.getElementById('helpModalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('helpModalOverlay')) {
+      closeHelpModal();
+    }
   });
 }
 
@@ -2258,6 +2339,7 @@ function saveToStorage() {
     solvedModels: state.solvedModels,
     modelHistory: state.modelHistory,
     sessionData: state.sessionData,
+    helpShown: state.helpShown,
     matrixSave: null
   };
 
@@ -2334,6 +2416,13 @@ function loadFromStorage() {
         matrix: [],
         rings: [],
         graph: []
+      };
+    }
+    if (!data.helpShown) {
+      state.helpShown = {
+        matrix: false,
+        rings: false,
+        graph: false
       };
     }
     if (data.currentPage) {
