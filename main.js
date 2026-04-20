@@ -736,7 +736,14 @@ function startModel(modelType, restore = false, showModal = false) {
       initRingsGame(canvas, difficulty);
       break;
     case 'graph':
-      initGraphGame(canvas, difficulty);
+      try {
+        initGraphGame(canvas, difficulty);
+      } catch (error) {
+        console.error('[GRAPH] Error in initGraphGame:', error);
+        showToast('Ошибка инициализации графа', 'error');
+        // Clear canvas on error
+        canvas.innerHTML = '';
+      }
       break;
   }
   
@@ -1285,36 +1292,54 @@ function updateRingsProgress(rings) {
 
 // ===== Graph Game - COMPLETELY REDESIGNED =====
 function initGraphGame(container, difficulty = 'medium') {
+  console.log('[GRAPH] Starting initGraphGame with difficulty:', difficulty);
+  console.time('initGraphGame');
+  
+  // Clear previous content efficiently to prevent lag
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  console.log('[GRAPH] Container cleared');
+  
   const graphContainer = document.createElement('div');
   graphContainer.className = 'graph-container';
+  graphContainer.style.visibility = 'hidden';
+  container.appendChild(graphContainer);
+  console.log('[GRAPH] Graph container created');
   
-  // Clear, meaningful node positions
-  const nodes = [
-    { id: 'S', x: 50, y: 195, label: 'Старт', type: 'start' },
-    { id: 'A', x: 200, y: 80, label: 'A' },
-    { id: 'B', x: 200, y: 310, label: 'B' },
-    { id: 'C', x: 380, y: 140, label: 'C' },
-    { id: 'D', x: 380, y: 260, label: 'D' },
-    { id: 'E', x: 520, y: 195, label: 'E' },
-    { id: 'F', x: 620, y: 195, label: 'Финиш', type: 'end' }
-  ];
+  const graphBounds = graphContainer.getBoundingClientRect();
+  const graphWidth = Math.max(700, graphBounds.width);
+  const graphHeight = Math.max(450, graphBounds.height);
+  graphContainer.style.visibility = 'visible';
   
-  // Edges with CLEAR cost and risk labels
-  const edges = [
-    { from: 'S', to: 'A', cost: 4, risk: 1 },
-    { from: 'S', to: 'B', cost: 2, risk: 3 },
-    { from: 'A', to: 'C', cost: 3, risk: 2 },
-    { from: 'A', to: 'D', cost: 5, risk: 4 },
-    { from: 'B', to: 'D', cost: 2, risk: 5 },
-    { from: 'C', to: 'E', cost: 4, risk: 6 },
-    { from: 'C', to: 'F', cost: 8, risk: 1 },
-    { from: 'D', to: 'E', cost: 3, risk: 2 },
-    { from: 'D', to: 'F', cost: 6, risk: 7 },
-    { from: 'E', to: 'F', cost: 2, risk: 3 }
-  ];
-  
-  const maxRisk = difficulty === 'easy' ? 3 : difficulty === 'medium' ? 5 : 7;
+  const maxRisk = difficulty === 'easy' ? 6 : difficulty === 'medium' ? 10 : 15;
+  const minMoves = difficulty === 'easy' ? 2 : difficulty === 'medium' ? 3 : 4;
   logTerminal(`[SYSTEM]: Макс. риск: ${maxRisk}`, 'info');
+  logTerminal(`[SYSTEM]: Минимум ходов в этой сложности: ${minMoves}`, 'info');
+  
+  console.log('[GRAPH] Generating random graph...');
+  console.time('generateRandomGraph');
+  // Generate random graph based on difficulty and actual container size
+  let { nodes, edges } = generateRandomGraph(difficulty, graphWidth, graphHeight, minMoves);
+  console.timeEnd('generateRandomGraph');
+  console.log('[GRAPH] Generated nodes:', nodes.length, 'edges:', edges.length);
+  logTerminal(`[SYSTEM]: Макс. риск: ${maxRisk}`, 'info');
+  logTerminal(`[SYSTEM]: Минимум ходов в этой сложности: ${minMoves}`, 'info');
+  
+  // Ensure there's always a valid path with the required minimum number of moves
+  let attempts = 0;
+  let optimalPath = findOptimalPath(nodes, edges, maxRisk);
+  while ((optimalPath.cost === Infinity || optimalPath.path.length - 1 < minMoves) && attempts < 6) {
+    ({ nodes, edges } = generateRandomGraph(difficulty, graphWidth, graphHeight, minMoves));
+    optimalPath = findOptimalPath(nodes, edges, maxRisk);
+    attempts++;
+  }
+  if (optimalPath.cost === Infinity || optimalPath.path.length - 1 < minMoves) {
+    console.warn('[GRAPH] Could not generate valid graph with minimum move length after attempts, forcing fallback.');
+    ({ nodes, edges } = generateRandomGraph(difficulty, graphWidth, graphHeight, minMoves));
+    optimalPath = findOptimalPath(nodes, edges, maxRisk);
+  }
+  
   const graphState = {
     currentNode: 'S',
     path: ['S'],
@@ -1323,8 +1348,12 @@ function initGraphGame(container, difficulty = 'medium') {
     visitedEdges: []
   };
   
-  // Calculate optimal path
-  const optimalPath = findOptimalPath(nodes, edges, maxRisk);
+  // Build adjacency map for fast edge lookup
+  const adjMap = {};
+  edges.forEach(edge => {
+    if (!adjMap[edge.from]) adjMap[edge.from] = {};
+    adjMap[edge.from][edge.to] = edge;
+  });
   
   // Draw edges
   edges.forEach(edge => {
@@ -1348,14 +1377,22 @@ function initGraphGame(container, difficulty = 'medium') {
     
     graphContainer.appendChild(edgeEl);
     
-    // Edge label with clear formatting
-    const label = document.createElement('div');
-    label.className = 'graph-edge-label';
-    label.innerHTML = `<span class="cost">$${edge.cost}</span> <span class="risk">R${edge.risk}</span>`;
-    label.style.left = ((fromNode.x + toNode.x) / 2 + 30) + 'px';
-    label.style.top = ((fromNode.y + toNode.y) / 2 + 15) + 'px';
-    graphContainer.appendChild(label);
+    // No edge labels to reduce DOM elements
   });
+  
+  // Single tooltip for all nodes
+  const tooltip = document.createElement('div');
+  tooltip.className = 'node-tooltip';
+  tooltip.style.display = 'none';
+  tooltip.style.position = 'absolute';
+  tooltip.style.background = 'rgba(0,0,0,0.9)';
+  tooltip.style.color = 'white';
+  tooltip.style.padding = '8px';
+  tooltip.style.borderRadius = '4px';
+  tooltip.style.fontSize = '12px';
+  tooltip.style.zIndex = '1000';
+  tooltip.style.pointerEvents = 'none';
+  graphContainer.appendChild(tooltip);
   
   // Draw nodes
   nodes.forEach(node => {
@@ -1370,15 +1407,44 @@ function initGraphGame(container, difficulty = 'medium') {
       nodeEl.classList.add('current');
     }
     
+    nodeEl.addEventListener('mouseenter', () => {
+      const edge = adjMap[graphState.currentNode] && adjMap[graphState.currentNode][node.id];
+      if (edge) {
+        const newCost = graphState.totalCost + edge.cost;
+        const newRisk = graphState.totalRisk + edge.risk;
+        const canMove = newRisk <= maxRisk && !graphState.path.includes(node.id);
+        
+        tooltip.innerHTML = `
+          <div class="tooltip-title">${node.label}</div>
+          <div class="tooltip-info">
+            <div>Стоимость ребра: $${edge.cost}</div>
+            <div>Риск ребра: ${edge.risk}</div>
+            <div>Итого стоимость: $${newCost}</div>
+            <div>Итого риск: ${newRisk}/${maxRisk}</div>
+            <div class="tooltip-status ${canMove ? 'possible' : 'impossible'}">
+              ${canMove ? 'Возможно перейти' : 'Невозможно (риск или уже посещено)'}
+            </div>
+          </div>
+        `;
+        tooltip.style.left = (node.x + 60) + 'px';
+        tooltip.style.top = (node.y - 20) + 'px';
+        tooltip.style.display = 'block';
+      }
+    });
+    
+    nodeEl.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+    
     nodeEl.addEventListener('click', () => {
-      handleGraphClick(node.id, nodes, edges, graphState, graphContainer, maxRisk, optimalPath);
+      handleGraphClick(node.id, nodes, adjMap, graphState, graphContainer, maxRisk, optimalPath);
     });
     
     graphContainer.appendChild(nodeEl);
   });
   
   // Highlight available moves
-  highlightAvailable(graphContainer, graphState, edges, maxRisk);
+  highlightAvailable(graphContainer, graphState, adjMap, maxRisk);
   
   // Info panel
   const info = document.createElement('div');
@@ -1403,59 +1469,336 @@ function initGraphGame(container, difficulty = 'medium') {
   // Optimal display
   const optimalDisplay = document.createElement('div');
   optimalDisplay.className = 'optimal-path-display';
-  optimalDisplay.innerHTML = `
-    <span class="label">Лучший результат:</span>
-    <span class="value">$${optimalPath.cost}</span>
-  `;
+  if (optimalPath.cost === Infinity) {
+    optimalDisplay.innerHTML = `
+      <span class="label">Лучший результат:</span>
+      <span class="value">Невозможно</span>
+      <div class="optimal-explanation" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Нет пути с риском ≤ ${maxRisk}</div>
+    `;
+  } else {
+    optimalDisplay.innerHTML = `
+      <span class="label">Лучший результат:</span>
+      <span class="value">$${optimalPath.cost}</span>
+      <div class="optimal-explanation" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Минимальная стоимость при риске ≤ ${maxRisk}</div>
+    `;
+  }
   graphContainer.appendChild(optimalDisplay);
   
   container.appendChild(graphContainer);
-  container.graphData = { nodes, edges, graphState, maxRisk, optimalPath };
+  container.graphData = { nodes, edges, graphState, maxRisk, optimalPath, adjMap };
   
   updateGraphProgress(graphState, nodes);
+  
+  console.timeEnd('initGraphGame');
+  console.log('[GRAPH] initGraphGame completed');
+}
+
+function generateRandomGraph(difficulty, containerWidth = 700, containerHeight = 450, minMoves = 2) {
+  console.log('[GENERATE] Starting with difficulty:', difficulty, 'minMoves:', minMoves);
+  
+  const nodeSize = 60;
+  const paddingX = 20;
+  const paddingTop = 140; // Increased to reserve top space
+  const reservedTop = 120; // Minimum y position
+  const reservedBottom = 160;
+  const usableWidth = Math.max(240, containerWidth - paddingX * 2 - nodeSize);
+  const usableHeight = Math.max(180, containerHeight - paddingTop - reservedBottom - nodeSize);
+  
+  const baseCount = difficulty === 'easy' ? 6 : difficulty === 'medium' ? 8 : 12;
+  const extraNodes = difficulty === 'easy' ? 1 + Math.floor(Math.random() * 2) : difficulty === 'medium' ? 2 + Math.floor(Math.random() * 3) : 3 + Math.floor(Math.random() * 3);
+  const nodeCount = Math.max(baseCount + extraNodes, minMoves + 2);
+  const pathLength = Math.max(minMoves, difficulty === 'easy' ? 2 : difficulty === 'medium' ? 3 : 5); // Hard min 5 moves
+  const mainPathCount = pathLength + 1;
+  
+  console.log('[GENERATE] Node count:', nodeCount, 'Main path length:', pathLength);
+  
+  const nodes = [];
+  const edges = [];
+  const usedIds = new Set();
+  const positions = [];
+  
+  // Create the guaranteed main path from S to F with intermediates
+  for (let stage = 0; stage < mainPathCount; stage++) {
+    const x = paddingX + (usableWidth * stage) / (mainPathCount - 1);
+    const y = paddingTop + usableHeight * 0.5 + (Math.random() - 0.5) * (difficulty === 'hard' ? 90 : 50);
+    positions.push({
+      x: Math.max(paddingX, Math.min(containerWidth - paddingX - nodeSize, x + (Math.random() - 0.5) * 20)),
+      y: Math.max(reservedTop, Math.min(containerHeight - reservedBottom - nodeSize, y)), // Respect reservedTop
+      stage
+    });
+  }
+  
+  // Add extra nodes in the middle area so they don't interfere with info block
+  for (let i = positions.length; i < nodeCount; i++) {
+    const stage = 1 + Math.floor(Math.random() * Math.max(1, mainPathCount - 2));
+    const x = paddingX + (usableWidth * stage) / (mainPathCount - 1) + (Math.random() - 0.5) * 140; // Increased
+    const y = paddingTop + usableHeight * (0.15 + Math.random() * 0.7);
+    positions.push({
+      x: Math.max(paddingX, Math.min(containerWidth - paddingX - nodeSize, x)),
+      y: Math.max(reservedTop, Math.min(containerHeight - reservedBottom - nodeSize, y)), // Respect reservedTop
+      stage
+    });
+  }
+  
+  // Ensure no overlapping nodes by checking distance - multiple passes
+  for (let pass = 0; pass < 10; pass++) { // Increased to 10 passes
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const dx = positions[i].x - positions[j].x;
+        const dy = positions[i].y - positions[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) { // Increased minimum distance to 100
+          // Move the second node away
+          const angle = Math.random() * 2 * Math.PI;
+          positions[j].x += Math.cos(angle) * 60; // Increased move distance to 60
+          positions[j].y += Math.sin(angle) * 60;
+          // Clamp to bounds
+          positions[j].x = Math.max(paddingX, Math.min(containerWidth - paddingX - nodeSize, positions[j].x));
+          positions[j].y = Math.max(reservedTop, Math.min(containerHeight - reservedBottom - nodeSize, positions[j].y)); // Respect reservedTop
+        }
+      }
+    }
+  }
+  
+  // Shuffle side nodes to vary layout while keeping main path order
+  const sidePositions = positions.slice(mainPathCount).sort(() => Math.random() - 0.5);
+  const orderedPositions = positions.slice(0, mainPathCount).concat(sidePositions);
+  
+  for (let i = 0; i < orderedPositions.length; i++) {
+    let id;
+    let attempts = 0;
+    do {
+      id = i === 0 ? 'S' : i === orderedPositions.length - 1 ? 'F' : String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      attempts++;
+      if (attempts > 100) {
+        console.error('[GENERATE] Could not generate unique ID for node', i);
+        id = `X${i}`;
+        break;
+      }
+    } while (usedIds.has(id));
+    usedIds.add(id);
+    
+    const label = id === 'S' ? 'Старт' : id === 'F' ? 'Финиш' : id;
+    const type = id === 'S' ? 'start' : id === 'F' ? 'end' : '';
+    const pos = orderedPositions[i];
+    nodes.push({ id, x: pos.x, y: pos.y, label, type, stage: pos.stage });
+  }
+  
+  console.log('[GENERATE] Nodes created');
+  
+  const usedEdges = new Set();
+  
+  // Guarantee the main path is present and preserves minimum move count
+  for (let i = 1; i < mainPathCount; i++) {
+    const from = nodes[i - 1].id;
+    const to = nodes[i].id;
+    const cost = 2 + Math.floor(Math.random() * (difficulty === 'hard' ? 6 : 4));
+    const risk = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 4 : 2)); // Reduced risk for main path
+    edges.push({ from, to, cost, risk });
+    usedEdges.add(`${from}-${to}`);
+    // Add reverse edge for undirected graph
+    edges.push({ from: to, to: from, cost, risk });
+    usedEdges.add(`${to}-${from}`);
+  }
+  
+  // Add edges between all nodes in the same stage to ensure connectivity
+  for (let stage = 0; stage < mainPathCount; stage++) {
+    const stageNodes = nodes.filter(n => n.stage === stage);
+    for (let i = 0; i < stageNodes.length; i++) {
+      for (let j = i + 1; j < stageNodes.length; j++) {
+        const from = stageNodes[i].id;
+        const to = stageNodes[j].id;
+        if (!usedEdges.has(`${from}-${to}`)) {
+          const cost = 1 + Math.floor(Math.random() * 3);
+          const risk = 1 + Math.floor(Math.random() * 2);
+          edges.push({ from, to, cost, risk });
+          usedEdges.add(`${from}-${to}`);
+          edges.push({ from: to, to: from, cost, risk });
+          usedEdges.add(`${to}-${from}`);
+        }
+      }
+    }
+  }
+  
+  // Add optional side edges to connect more nodes
+  const maxExtra = difficulty === 'easy' ? 8 : difficulty === 'medium' ? 12 : 18; // Increased further
+  let extraAdded = 0;
+  let attempts = 0;
+  while (extraAdded < maxExtra && attempts < 500) { // Increased attempts
+    const fromIndex = Math.floor(Math.random() * nodes.length);
+    const toIndex = Math.floor(Math.random() * nodes.length);
+    const fromNode = nodes[fromIndex];
+    const toNode = nodes[toIndex];
+    if (fromIndex === toIndex) {
+      attempts++;
+      continue;
+    }
+    const stageDiff = Math.abs((fromNode.stage || 0) - (toNode.stage || 0));
+    if (stageDiff > 4) { // Increased to 4
+      attempts++;
+      continue;
+    }
+    if (usedEdges.has(`${fromNode.id}-${toNode.id}`) || usedEdges.has(`${toNode.id}-${fromNode.id}`)) {
+      attempts++;
+      continue;
+    }
+    if ((fromNode.id === 'S' && toNode.id === 'F') || (fromNode.id === 'F' && toNode.id === 'S')) {
+      attempts++;
+      continue;
+    }
+    const cost = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 5 : 3)); // Reduced range
+    const risk = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 2 : 1)); // Reduced risk for extra edges
+    edges.push({ from: fromNode.id, to: toNode.id, cost, risk });
+    usedEdges.add(`${fromNode.id}-${toNode.id}`);
+    // Add reverse edge for undirected graph
+    edges.push({ from: toNode.id, to: fromNode.id, cost, risk });
+    usedEdges.add(`${toNode.id}-${fromNode.id}`);
+    extraAdded++;
+  }
+  
+  console.log('[GENERATE] Extra edges added, total edges:', edges.length);
+  
+  return { nodes, edges };
+}
+
+// Efficient MinHeap implementation for Dijkstra
+class MinHeap {
+  constructor() {
+    this.heap = [];
+  }
+  
+  enqueue(element, priority) {
+    this.heap.push({ element, priority });
+    this._bubbleUp(this.heap.length - 1);
+  }
+  
+  dequeue() {
+    if (this.heap.length === 0) return null;
+    if (this.heap.length === 1) return this.heap.pop();
+    const root = this.heap[0];
+    this.heap[0] = this.heap.pop();
+    this._sinkDown(0);
+    return root;
+  }
+  
+  isEmpty() {
+    return this.heap.length === 0;
+  }
+  
+  _bubbleUp(index) {
+    while (index > 0) {
+      const parentIndex = Math.floor((index - 1) / 2);
+      if (this.heap[index].priority >= this.heap[parentIndex].priority) break;
+      [this.heap[index], this.heap[parentIndex]] = [this.heap[parentIndex], this.heap[index]];
+      index = parentIndex;
+    }
+  }
+  
+  _sinkDown(index) {
+    const length = this.heap.length;
+    while (true) {
+      let left = 2 * index + 1;
+      let right = 2 * index + 2;
+      let smallest = index;
+      
+      if (left < length && this.heap[left].priority < this.heap[smallest].priority) {
+        smallest = left;
+      }
+      if (right < length && this.heap[right].priority < this.heap[smallest].priority) {
+        smallest = right;
+      }
+      if (smallest === index) break;
+      
+      [this.heap[index], this.heap[smallest]] = [this.heap[smallest], this.heap[index]];
+      index = smallest;
+    }
+  }
 }
 
 function findOptimalPath(nodes, edges, maxRisk) {
-  const queue = [{ id: 'S', cost: 0, risk: 0, path: ['S'] }];
-  let best = { cost: Infinity, risk: 0, path: [] };
+  console.log('[DIJKSTRA] Starting with nodes:', nodes.length, 'maxRisk:', maxRisk);
   
-  while (queue.length > 0) {
-    queue.sort((a, b) => a.cost - b.cost);
-    const current = queue.shift();
-    
-    if (current.id === 'F') {
-      if (current.cost < best.cost) {
-        best = { cost: current.cost, risk: current.risk, path: current.path };
-      }
-      continue;
+  // Build adjacency list for faster access
+  const adj = {};
+  edges.forEach(edge => {
+    if (!adj[edge.from]) adj[edge.from] = [];
+    adj[edge.from].push(edge);
+  });
+  
+  const dist = {};
+  const prev = {};
+  const risk = {};
+  const pq = new MinHeap();
+  const visited = new Set();
+  
+  // Initialize
+  nodes.forEach(node => {
+    dist[node.id] = node.id === 'S' ? 0 : Infinity;
+    risk[node.id] = node.id === 'S' ? 0 : Infinity;
+    prev[node.id] = null;
+    if (node.id === 'S') {
+      pq.enqueue(node.id, 0);
+    }
+  });
+  
+  let iterations = 0;
+  while (!pq.isEmpty()) {
+    iterations++;
+    if (iterations > 1000) {
+      console.error('[DIJKSTRA] Too many iterations, breaking');
+      break;
     }
     
-    edges.filter(e => e.from === current.id).forEach(edge => {
-      const newCost = current.cost + edge.cost;
-      const newRisk = current.risk + edge.risk;
+    const { element: current } = pq.dequeue();
+    
+    if (visited.has(current)) continue;
+    visited.add(current);
+    
+    if (dist[current] === Infinity) break;
+    
+    // Use adjacency list instead of filtering
+    (adj[current] || []).forEach(edge => {
+      if (visited.has(edge.to)) return;
       
-      if (newRisk <= maxRisk && newCost < best.cost) {
-        queue.push({
-          id: edge.to,
-          cost: newCost,
-          risk: newRisk,
-          path: [...current.path, edge.to]
-        });
+      const newCost = dist[current] + edge.cost;
+      const newRisk = risk[current] + edge.risk;
+      
+      if (newRisk <= maxRisk && newCost < dist[edge.to]) {
+        dist[edge.to] = newCost;
+        risk[edge.to] = newRisk;
+        prev[edge.to] = current;
+        pq.enqueue(edge.to, newCost);
       }
     });
   }
   
-  return best;
+  console.log('[DIJKSTRA] Completed in', iterations, 'iterations');
+  
+  // Reconstruct path
+  const path = [];
+  let current = 'F';
+  while (current !== null) {
+    path.unshift(current);
+    current = prev[current];
+  }
+  
+  if (path[0] !== 'S' || dist['F'] === Infinity) {
+    console.log('[DIJKSTRA] No path found');
+    return { cost: Infinity, risk: 0, path: [] };
+  }
+  
+  console.log('[DIJKSTRA] Path found:', path, 'cost:', dist['F']);
+  return { cost: dist['F'], risk: risk['F'], path };
 }
 
-function highlightAvailable(container, graphState, edges, maxRisk) {
+function highlightAvailable(container, graphState, adjMap, maxRisk) {
   const nodeEls = container.querySelectorAll('.graph-node');
   
   nodeEls.forEach(el => {
     el.classList.remove('available', 'blocked');
   });
   
-  edges.filter(e => e.from === graphState.currentNode).forEach(edge => {
+  Object.values(adjMap[graphState.currentNode] || {}).forEach(edge => {
     const targetEl = container.querySelector(`[data-id="${edge.to}"]`);
     if (!targetEl) return;
     
@@ -1469,16 +1812,16 @@ function highlightAvailable(container, graphState, edges, maxRisk) {
   });
 }
 
-function handleGraphClick(nodeId, nodes, edges, graphState, container, maxRisk, optimalPath) {
+function handleGraphClick(nodeId, nodes, adjMap, graphState, container, maxRisk, optimalPath) {
   // Validate inputs
-  if (!nodeId || !nodes || !edges) {
-    console.error('[GRAPH] Invalid graph state:', { nodeId, nodesExists: !!nodes, edgesExists: !!edges });
+  if (!nodeId || !nodes || !adjMap) {
+    console.error('[GRAPH] Invalid graph state:', { nodeId, nodesExists: !!nodes, adjMapExists: !!adjMap });
     showToast('Ошибка графа: невалидное состояние', 'error');
     return;
   }
 
   // Check if it's a valid move
-  const edge = edges.find(e => e && e.from === graphState.currentNode && e.to === nodeId);
+  const edge = adjMap[graphState.currentNode] && adjMap[graphState.currentNode][nodeId];
   
   if (!edge) {
     showToast('Нет прямого пути к этой вершине', 'error');
@@ -1541,7 +1884,7 @@ function handleGraphClick(nodeId, nodes, edges, graphState, container, maxRisk, 
   }
   
   // Highlight available
-  highlightAvailable(container, graphState, edges, maxRisk);
+  highlightAvailable(container, graphState, adjMap, maxRisk);
   
   // Update info
   document.getElementById('graphCost').textContent = '$' + graphState.totalCost;
@@ -1847,12 +2190,11 @@ function undoGraphMove(previousState) {
   const container = canvas.querySelector('.graph-container');
   const graphData = canvas.graphData;
   
-  // Restore state
   graphData.graphState.currentNode = previousState.currentNode;
-  graphData.graphState.path = previousState.path;
+  graphData.graphState.path = [...previousState.path];
   graphData.graphState.totalCost = previousState.totalCost;
   graphData.graphState.totalRisk = previousState.totalRisk;
-  graphData.graphState.visitedEdges = previousState.visitedEdges;
+  graphData.graphState.visitedEdges = Array.isArray(previousState.visitedEdges) ? [...previousState.visitedEdges] : [];
   
   // Update UI
   const nodeEls = container.querySelectorAll('.graph-node');
@@ -1879,7 +2221,7 @@ function undoGraphMove(previousState) {
     }
   });
   
-  highlightAvailable(container, graphData.graphState, graphData.edges, graphData.maxRisk);
+  highlightAvailable(container, graphData.graphState, graphData.adjMap, graphData.maxRisk);
   
   // Update info
   document.getElementById('graphCost').textContent = '$' + previousState.totalCost;

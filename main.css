@@ -1496,11 +1496,13 @@ body {
 /* ===== Graph Game - LARGER & CLEARER ===== */
 .graph-container {
   position: relative;
-  width: 700px;
-  height: 450px;
+  width: 760px;
+  height: 560px;
+  padding: 1rem 1rem 5.5rem;
   background: var(--bg-glass);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .graph-node {
@@ -1615,6 +1617,7 @@ body {
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   border: 1px solid var(--border-color);
+  z-index: 30;
 }
 
 .graph-info span {
@@ -1645,6 +1648,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
+  z-index: 30;
 }
 
 .legend-item {
@@ -1678,6 +1682,7 @@ body {
   border: 1px solid var(--accent-success);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
+  z-index: 30;
 }
 
 .optimal-path-display .label {
