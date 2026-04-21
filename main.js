@@ -43,6 +43,117 @@ const state = {
 let sidebarInitialized = false;
 let sidebarMouseMoveHandler = null;
 let sidebarMouseUpHandler = null;
+let graphResizeTimeout = null;
+let lastGraphWindowSize = { width: window.innerWidth, height: window.innerHeight };
+let cachedResponsiveBucket = '';
+let cachedResponsiveConfig = null;
+
+// ===== Graph Responsive Config =====
+// Single source of truth for graph breakpoints/sizes (syncs with CSS custom properties).
+const RESPONSIVE_CONFIG = {
+  breakpoints: {
+    xs: 320,
+    sm: 480,
+    md: 640,
+    lg: 768,
+    xl: 1024,
+    xxl: 1200
+  },
+  graph: {
+    xs: { nodeSize: 38, padding: 10, multiplier: 0.6, minHeight: 320 },
+    sm: { nodeSize: 44, padding: 15, multiplier: 0.7, minHeight: 360 },
+    md: { nodeSize: 48, padding: 15, multiplier: 0.8, minHeight: 390 },
+    lg: { nodeSize: 54, padding: 20, multiplier: 0.85, minHeight: 410 },
+    xl: { nodeSize: 58, padding: 25, multiplier: 0.9, minHeight: 430 },
+    xxl: { nodeSize: 62, padding: 30, multiplier: 1, minHeight: 460 }
+  }
+};
+
+function syncResponsiveConfigWithCSS() {
+  const cssVars = getComputedStyle(document.documentElement);
+  const parsePx = (name, fallback) => {
+    const value = parseFloat(cssVars.getPropertyValue(name));
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  RESPONSIVE_CONFIG.breakpoints.xs = parsePx('--bp-xs', RESPONSIVE_CONFIG.breakpoints.xs);
+  RESPONSIVE_CONFIG.breakpoints.sm = parsePx('--bp-sm', RESPONSIVE_CONFIG.breakpoints.sm);
+  RESPONSIVE_CONFIG.breakpoints.md = parsePx('--bp-md', RESPONSIVE_CONFIG.breakpoints.md);
+  RESPONSIVE_CONFIG.breakpoints.lg = parsePx('--bp-lg', RESPONSIVE_CONFIG.breakpoints.lg);
+  RESPONSIVE_CONFIG.breakpoints.xl = parsePx('--bp-xl', RESPONSIVE_CONFIG.breakpoints.xl);
+  RESPONSIVE_CONFIG.breakpoints.xxl = parsePx('--bp-2xl', RESPONSIVE_CONFIG.breakpoints.xxl);
+}
+
+function getResponsiveBucket(width) {
+  const bp = RESPONSIVE_CONFIG.breakpoints;
+  if (width >= bp.xxl) return 'xxl';
+  if (width >= bp.xl) return 'xl';
+  if (width >= bp.lg) return 'lg';
+  if (width >= bp.md) return 'md';
+  if (width >= bp.sm) return 'sm';
+  return 'xs';
+}
+
+// Picks graph sizing profile for current viewport.
+function getResponsiveConfig() {
+  const bucket = getResponsiveBucket(window.innerWidth);
+  if (cachedResponsiveConfig && cachedResponsiveBucket === bucket) {
+    return cachedResponsiveConfig;
+  }
+  cachedResponsiveBucket = bucket;
+  cachedResponsiveConfig = RESPONSIVE_CONFIG.graph[bucket];
+  return cachedResponsiveConfig;
+}
+
+// Computes usable graph area with orientation-aware UI reservations.
+function getEffectiveDimensions(containerWidth = 700, containerHeight = 450) {
+  const config = getResponsiveConfig();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const isPortrait = viewportHeight > viewportWidth;
+  const isLandscape = viewportWidth > viewportHeight;
+  const horizontalChrome = config.padding * 2 + 20;
+  const verticalChrome = isLandscape ? 95 : 130;
+  const width = Math.max(280, Math.min(containerWidth, viewportWidth - horizontalChrome));
+  const viewportLimitedHeight = Math.max(260, viewportHeight - verticalChrome);
+  const height = Math.max(config.minHeight, Math.min(containerHeight, viewportLimitedHeight));
+
+  return {
+    width,
+    height,
+    isPortrait,
+    isLandscape,
+    aspectRatio: viewportWidth / Math.max(viewportHeight, 1)
+  };
+}
+
+function reloadGraphModel() {
+  const canvas = document.getElementById('mainCanvas');
+  if (!canvas || state.currentModel !== 'graph' || !canvas.graphData) return;
+  initGraphGame(canvas, getDifficultyForModel('graph'));
+}
+
+function setupGraphResponsiveHandlers() {
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      reloadGraphModel();
+      lastGraphWindowSize = { width: window.innerWidth, height: window.innerHeight };
+    }, 200);
+  });
+
+  window.addEventListener('resize', () => {
+    clearTimeout(graphResizeTimeout);
+    graphResizeTimeout = setTimeout(() => {
+      const widthDiff = Math.abs(window.innerWidth - lastGraphWindowSize.width);
+      const heightDiff = Math.abs(window.innerHeight - lastGraphWindowSize.height);
+      if (widthDiff > 50 || heightDiff > 50) {
+        cachedResponsiveConfig = null;
+        reloadGraphModel();
+      }
+      lastGraphWindowSize = { width: window.innerWidth, height: window.innerHeight };
+    }, 300);
+  });
+}
 
 // ===== DOM Elements =====
 const pages = document.querySelectorAll('.page');
@@ -446,6 +557,8 @@ function initResizableSidebars() {
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', () => {
+  syncResponsiveConfigWithCSS();
+  setupGraphResponsiveHandlers();
   loadFromStorage();
   initNavigation();
   initDashboard();
@@ -775,18 +888,13 @@ function initMatrixGame(container, difficulty = 'medium') {
   logTerminal(`[SYSTEM]: Матрица ${size}x${size}`, 'info');
   const matrix = buildMatrixPuzzle(size, difficulty);
   
-  // Calculate cell size based on screen width - larger on mobile
-  let cellSize, gap;
-  if (window.innerWidth <= 480) {
-    cellSize = 60;
-    gap = 3;
-  } else if (window.innerWidth <= 768) {
-    cellSize = 65;
-    gap = 4;
-  } else {
-    cellSize = 85;
-    gap = 8;
-  }
+  // Calculate cell size based on available canvas width (prevents overflow on very small devices)
+  const containerWidth = Math.max(240, container.getBoundingClientRect().width || window.innerWidth);
+  let gap = window.innerWidth <= 390 ? 2 : window.innerWidth <= 480 ? 3 : window.innerWidth <= 768 ? 4 : 8;
+  const paddingAllowance = 18; // breathing room inside canvas
+  const maxCellByWidth = Math.floor((containerWidth - paddingAllowance - gap * (size - 1)) / size);
+  let cellSize = window.innerWidth <= 480 ? 60 : window.innerWidth <= 768 ? 65 : 85;
+  cellSize = Math.max(38, Math.min(cellSize, maxCellByWidth));
   
   const grid = document.createElement('div');
   grid.className = 'matrix-grid';
@@ -823,18 +931,13 @@ function restoreMatrixGame(container, save) {
   const size = save.size;
   const matrix = save.matrix.map(row => [...row]);
   
-  // Calculate cell size based on screen width - larger on mobile
-  let cellSize, gap;
-  if (window.innerWidth <= 480) {
-    cellSize = 60;
-    gap = 3;
-  } else if (window.innerWidth <= 768) {
-    cellSize = 65;
-    gap = 4;
-  } else {
-    cellSize = 85;
-    gap = 8;
-  }
+  // Calculate cell size based on available canvas width (prevents overflow on very small devices)
+  const containerWidth = Math.max(240, container.getBoundingClientRect().width || window.innerWidth);
+  let gap = window.innerWidth <= 390 ? 2 : window.innerWidth <= 480 ? 3 : window.innerWidth <= 768 ? 4 : 8;
+  const paddingAllowance = 18;
+  const maxCellByWidth = Math.floor((containerWidth - paddingAllowance - gap * (size - 1)) / size);
+  let cellSize = window.innerWidth <= 480 ? 60 : window.innerWidth <= 768 ? 65 : 85;
+  cellSize = Math.max(38, Math.min(cellSize, maxCellByWidth));
   
   const grid = document.createElement('div');
   grid.className = 'matrix-grid';
@@ -1092,16 +1195,27 @@ function initRingsGame(container, difficulty = 'medium') {
   const numRings = sectors.length;
   const colors = ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b'];
   const names = ['Внешнее', 'Среднее', 'Внутреннее', 'Центральное'];
-  
-  // Use responsive sizing via data attribute (CSS will handle responsive sizing)
+
+  const ringsLayout = getRingsLayoutConfig(numRings);
+  ringsContainer.style.width = `${ringsLayout.containerSize}px`;
+  ringsContainer.style.height = `${ringsLayout.containerSize}px`;
+  ringsContainer.style.setProperty('--rings-top-marker-offset', `${ringsLayout.topMarkerOffset}px`);
+  ringsContainer.style.setProperty('--rings-arrow-half', `${ringsLayout.arrowHalf}px`);
+  ringsContainer.style.setProperty('--rings-arrow-height', `${ringsLayout.arrowHeight}px`);
+
+  // Use responsive sizing via data attribute
   ringsContainer.dataset.difficulty = difficulty;
   
   const rings = [];
+  const outerRadius = Math.floor(ringsLayout.containerSize * 0.47);
+  // Keep rings closer together to avoid "too much air" on desktop.
+  // Gap is derived from available radius to stay consistent across screens.
+  const ringGap = Math.max(20, Math.floor(outerRadius / (numRings + 1.2)));
   for (let i = 0; i < numRings; i++) {
     rings.push({
-      radius: 200 - i * 48,
+      radius: outerRadius - i * ringGap,
       sectors: sectors[i],
-      rotation: 0,
+      step: 0,
       color: colors[i],
       name: names[i]
     });
@@ -1123,17 +1237,7 @@ function initRingsGame(container, difficulty = 'medium') {
   
   // Top marker
   const topMarker = document.createElement('div');
-  topMarker.style.cssText = `
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-top: 15px solid var(--accent-success);
-  `;
+  topMarker.className = 'rings-top-marker';
   ringsContainer.appendChild(topMarker);
   
   container.appendChild(ringsContainer);
@@ -1143,44 +1247,78 @@ function initRingsGame(container, difficulty = 'medium') {
 
 function buildRingsPuzzle(rings, difficulty) {
   const moveCounts = {
-    easy: [3, 6],
-    medium: [5, 10],
-    hard: [8, 15]
+    easy: [5, 10],
+    medium: [10, 18],
+    hard: [18, 30]
   };
-  const [minMoves, maxMoves] = moveCounts[difficulty] || moveCounts.medium;
-  const numMoves = Math.floor(Math.random() * (maxMoves - minMoves + 1)) + minMoves;
-  
-  for (let i = 0; i < numMoves; i++) {
-    const ringIndex = Math.floor(Math.random() * rings.length);
-    const direction = Math.random() < 0.5 ? -1 : 1;
-    simulateRingRotation(rings, ringIndex, direction);
-  }
-  
-  // Ensure not solved
-  const isSolved = rings.every(r => {
-    const norm = ((r.rotation % 360) + 360) % 360;
-    return norm < 15 || norm > 345;
-  });
-  if (isSolved) {
-    // Apply one more random move
-    const ringIndex = Math.floor(Math.random() * rings.length);
-    const direction = Math.random() < 0.5 ? -1 : 1;
-    simulateRingRotation(rings, ringIndex, direction);
+  const maxTries = 16;
+  for (let attempt = 0; attempt < maxTries; attempt++) {
+    rings.forEach(r => { r.step = 0; });
+    const [minMoves, maxMoves] = moveCounts[difficulty] || moveCounts.medium;
+    const numMoves = Math.floor(Math.random() * (maxMoves - minMoves + 1)) + minMoves;
+
+    for (let i = 0; i < numMoves; i++) {
+      const ringIndex = Math.floor(Math.random() * rings.length);
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      applyRingsMove(rings, ringIndex, direction, difficulty);
+    }
+
+    const isSolved = rings.every(r => {
+      return ((r.step % r.sectors) + r.sectors) % r.sectors === 0;
+    });
+    const misalignedCount = rings.filter(r => {
+      return ((r.step % r.sectors) + r.sectors) % r.sectors !== 0;
+    }).length;
+    const totalDistance = rings.reduce((acc, ring) => {
+      const s = ((ring.step % ring.sectors) + ring.sectors) % ring.sectors;
+      const distSteps = Math.min(s, ring.sectors - s);
+      return acc + distSteps;
+    }, 0);
+    const minDistanceByDifficulty = difficulty === 'easy' ? 4 : difficulty === 'medium' ? 8 : 12;
+    if (!isSolved && misalignedCount >= Math.min(rings.length, difficulty === 'hard' ? 4 : 3) && totalDistance >= minDistanceByDifficulty) {
+      return;
+    }
   }
 }
 
-function simulateRingRotation(rings, ringIndex, direction) {
-  const ring = rings[ringIndex];
-  const step = 360 / (8 - ringIndex * 2); // Same as in createRingElement
-  
-  ring.rotation = (ring.rotation + step * direction + 360) % 360;
-  
-  // Apply dependent rotation to inner rings
-  if (ringIndex < rings.length - 1) {
-    const innerRing = rings[ringIndex + 1];
-    const innerStep = step * direction * 0.5;
-    innerRing.rotation = (innerRing.rotation + innerStep + 360) % 360;
+function applyRingsMove(rings, ringIndex, direction, difficulty = 'medium') {
+  const coupling = {
+    easy: [1, 0, 0, 0],
+    medium: [1, 1, 0, 0],
+    hard: [1, 1, 1, 0]
+  };
+  const weights = coupling[difficulty] || coupling.medium;
+
+  const applySteps = (ring, deltaSteps) => {
+    ring.step = ((ring.step + deltaSteps) % ring.sectors + ring.sectors) % ring.sectors;
+  };
+
+  // Back-coupling to outer rings (adds planning difficulty).
+  // Still always solvable because we scramble from a solved state using the same move rule.
+  const outerCoupling = {
+    easy: [],
+    medium: [{ dist: 1, weight: -1 }],
+    hard: [{ dist: 1, weight: -1 }, { dist: 2, weight: -1 }]
+  };
+  const outerWeights = outerCoupling[difficulty] || outerCoupling.medium;
+
+  applySteps(rings[ringIndex], direction * 1);
+  for (let i = ringIndex + 1; i < rings.length; i++) {
+    const distance = i - ringIndex;
+    const weight = weights[distance - 1] || 0;
+    if (weight === 0) continue;
+    applySteps(rings[i], direction * weight);
   }
+
+  for (const rule of outerWeights) {
+    const outerIndex = ringIndex - rule.dist;
+    if (outerIndex < 0) continue;
+    applySteps(rings[outerIndex], direction * rule.weight);
+  }
+}
+
+function getRingRotationDeg(ring) {
+  return (ring.step * (360 / ring.sectors)) % 360;
 }
 
 function createRingElement(ringData, index, allRings, container) {
@@ -1191,7 +1329,7 @@ function createRingElement(ringData, index, allRings, container) {
   ring.style.left = `calc(50% - ${ringData.radius}px)`;
   ring.style.top = `calc(50% - ${ringData.radius}px)`;
   ring.style.borderColor = ringData.color;
-  ring.style.transform = `rotate(${ringData.rotation}deg)`;
+  ring.style.transform = `rotate(${getRingRotationDeg(ringData)}deg)`;
   ring.dataset.index = index;
   
   // Adaptive marker size based on radius
@@ -1225,39 +1363,31 @@ function createRingElement(ringData, index, allRings, container) {
     e.stopPropagation();
     
     // Save state for undo (with size limit)
-    state.moveHistory.push(JSON.stringify(allRings.map(r => r.rotation)));
+    state.moveHistory.push(JSON.stringify(allRings.map(r => r.step)));
     if (state.moveHistory.length > 100) {
       state.moveHistory.shift();
     }
     
     const direction = e.shiftKey ? -1 : 1;
-    const step = 360 / (8 - index * 2); // Outer: 45, middle: 60, inner: 90
-    
-    ringData.rotation = (ringData.rotation + step * direction + 360) % 360;
-    ring.style.transform = `rotate(${ringData.rotation}deg)`;
-    
-    // Dependent rotation: outer rings affect inner rings (in whole steps to avoid precision drift)
-    if (index < allRings.length - 1) {
-      const innerRing = allRings[index + 1];
-      // Use whole step increments instead of 0.3 multiplier to avoid floating point accumulation
-      const innerStep = step * direction * 0.5;  // Whole fraction, not floating point
-      innerRing.rotation = (innerRing.rotation + innerStep + 3600) % 360;  // Added buffer
-      const innerEl = container.children[index + 1];
-      innerEl.style.transform = `rotate(${innerRing.rotation}deg)`;
+    const currentDifficulty = container.dataset.difficulty || 'medium';
+    applyRingsMove(allRings, index, direction, currentDifficulty);
+
+    // Render all rings after move (keeps transforms consistent)
+    for (let i = 0; i < allRings.length; i++) {
+      const ringEl = container.children[i];
+      if (ringEl) {
+        ringEl.style.transform = `rotate(${getRingRotationDeg(allRings[i])}deg)`;
+      }
     }
     
     state.moves++;
     updateMovesCount();
     updateRingsProgress(allRings);
     
-    logTerminal(`[EVENT]: ${ringData.name} кольцо повернуто на ${step * direction}°`, 'event');
+    logTerminal(`[EVENT]: ${ringData.name} кольцо повернуто на ${direction > 0 ? '+' : '-'}1 шаг`, 'event');
     
-    // Check win - all markers at top (rotation near 0, with tolerance for precision drift)
-    const aligned = allRings.every(r => {
-      const norm = ((r.rotation % 360) + 360) % 360;
-      // More lenient tolerance to account for floating point accumulation
-      return norm < 15 || norm > 345;
-    });
+    // Check win (exact discrete alignment)
+    const aligned = allRings.every(r => ((r.step % r.sectors) + r.sectors) % r.sectors === 0);
     
     if (aligned) {
       handleWin('rings');
@@ -1269,13 +1399,36 @@ function createRingElement(ringData, index, allRings, container) {
   return ring;
 }
 
+function getRingsLayoutConfig(numRings) {
+  const width = window.innerWidth;
+  let containerSize;
+  if (width <= 414) containerSize = 300;
+  else if (width <= 480) containerSize = 340;
+  else if (width <= 768) containerSize = 400;
+  else if (width <= 1024) containerSize = 460;
+  else containerSize = 520;
+
+  if (numRings >= 4) {
+    containerSize = Math.max(250, containerSize - 10);
+  }
+
+  return {
+    containerSize,
+    // Lift the arrow so it doesn't overlap the outer ring.
+    topMarkerOffset: Math.round(containerSize * -0.06),
+    // Keep arrow visible but not huge.
+    arrowHalf: Math.max(10, Math.round(containerSize * 0.035)),
+    arrowHeight: Math.max(14, Math.round(containerSize * 0.05))
+  };
+}
+
 function updateRingsProgress(rings) {
   let totalAlignment = 0;
   
   rings.forEach(ring => {
-    const norm = ((ring.rotation % 360) + 360) % 360;
-    const dist = Math.min(norm, 360 - norm);
-    const alignment = 1 - (dist / 180);
+    const s = ((ring.step % ring.sectors) + ring.sectors) % ring.sectors;
+    const distSteps = Math.min(s, ring.sectors - s);
+    const alignment = 1 - (distSteps / Math.max(1, ring.sectors / 2));
     totalAlignment += alignment;
   });
   
@@ -1308,37 +1461,26 @@ function initGraphGame(container, difficulty = 'medium') {
   console.log('[GRAPH] Graph container created');
   
   const graphBounds = graphContainer.getBoundingClientRect();
-  const graphWidth = Math.max(700, graphBounds.width);
-  const graphHeight = Math.max(450, graphBounds.height);
+  const graphDimensions = getEffectiveDimensions(graphBounds.width, graphBounds.height);
+  const graphWidth = graphDimensions.width;
+  const graphHeight = graphDimensions.height;
   graphContainer.style.visibility = 'visible';
   
-  const maxRisk = difficulty === 'easy' ? 6 : difficulty === 'medium' ? 10 : 15;
-  const minMoves = difficulty === 'easy' ? 2 : difficulty === 'medium' ? 3 : 4;
+  const maxRisk = difficulty === 'easy' ? 6 : difficulty === 'medium' ? 10 : 20;
+  const minMoves = difficulty === 'easy' ? 3 : difficulty === 'medium' ? 5 : 8;
   logTerminal(`[SYSTEM]: Макс. риск: ${maxRisk}`, 'info');
   logTerminal(`[SYSTEM]: Минимум ходов в этой сложности: ${minMoves}`, 'info');
   
   console.log('[GRAPH] Generating random graph...');
   console.time('generateRandomGraph');
-  // Generate random graph based on difficulty and actual container size
-  let { nodes, edges } = generateRandomGraph(difficulty, graphWidth, graphHeight, minMoves);
+  const responsiveConfig = getResponsiveConfig();
+  let { nodes, edges, optimalPath } = generateValidatedGraph(difficulty, graphWidth, graphHeight, minMoves, maxRisk, responsiveConfig);
   console.timeEnd('generateRandomGraph');
   console.log('[GRAPH] Generated nodes:', nodes.length, 'edges:', edges.length);
   logTerminal(`[SYSTEM]: Макс. риск: ${maxRisk}`, 'info');
   logTerminal(`[SYSTEM]: Минимум ходов в этой сложности: ${minMoves}`, 'info');
   
-  // Ensure there's always a valid path with the required minimum number of moves
-  let attempts = 0;
-  let optimalPath = findOptimalPath(nodes, edges, maxRisk);
-  while ((optimalPath.cost === Infinity || optimalPath.path.length - 1 < minMoves) && attempts < 6) {
-    ({ nodes, edges } = generateRandomGraph(difficulty, graphWidth, graphHeight, minMoves));
-    optimalPath = findOptimalPath(nodes, edges, maxRisk);
-    attempts++;
-  }
-  if (optimalPath.cost === Infinity || optimalPath.path.length - 1 < minMoves) {
-    console.warn('[GRAPH] Could not generate valid graph with minimum move length after attempts, forcing fallback.');
-    ({ nodes, edges } = generateRandomGraph(difficulty, graphWidth, graphHeight, minMoves));
-    optimalPath = findOptimalPath(nodes, edges, maxRisk);
-  }
+  // Graph is prevalidated by generateValidatedGraph (solvable + no trivial shortcuts).
   
   const graphState = {
     currentNode: 'S',
@@ -1370,8 +1512,9 @@ function initGraphGame(container, difficulty = 'medium') {
     const length = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx) * 180 / Math.PI;
     
-    edgeEl.style.left = (fromNode.x + 30) + 'px';
-    edgeEl.style.top = (fromNode.y + 30) + 'px';
+    const nodeRadius = responsiveConfig.nodeSize / 2;
+    edgeEl.style.left = (fromNode.x + nodeRadius) + 'px';
+    edgeEl.style.top = (fromNode.y + nodeRadius) + 'px';
     edgeEl.style.width = length + 'px';
     edgeEl.style.transform = `rotate(${angle}deg)`;
     
@@ -1401,6 +1544,9 @@ function initGraphGame(container, difficulty = 'medium') {
     nodeEl.textContent = node.label;
     nodeEl.style.left = node.x + 'px';
     nodeEl.style.top = node.y + 'px';
+    nodeEl.style.width = `${responsiveConfig.nodeSize}px`;
+    nodeEl.style.height = `${responsiveConfig.nodeSize}px`;
+    nodeEl.style.fontSize = `${Math.max(11, Math.round(responsiveConfig.nodeSize * 0.25))}px`;
     nodeEl.dataset.id = node.id;
     
     if (node.id === 'S') {
@@ -1417,9 +1563,9 @@ function initGraphGame(container, difficulty = 'medium') {
         tooltip.innerHTML = `
           <div class="tooltip-title">${node.label}</div>
           <div class="tooltip-info">
-            <div>Стоимость ребра: $${edge.cost}</div>
+            <div>Стоимость ребра: ${edge.cost} ₸</div>
             <div>Риск ребра: ${edge.risk}</div>
-            <div>Итого стоимость: $${newCost}</div>
+            <div>Итого стоимость: ${newCost} ₸</div>
             <div>Итого риск: ${newRisk}/${maxRisk}</div>
             <div class="tooltip-status ${canMove ? 'possible' : 'impossible'}">
               ${canMove ? 'Возможно перейти' : 'Невозможно (риск или уже посещено)'}
@@ -1450,7 +1596,7 @@ function initGraphGame(container, difficulty = 'medium') {
   const info = document.createElement('div');
   info.className = 'graph-info';
   info.innerHTML = `
-    <span>Стоимость: <span class="value" id="graphCost">$0</span></span>
+    <span>Стоимость: <span class="value" id="graphCost">0 ₸</span></span>
     <span>Риск: <span class="value" id="graphRisk">0</span>/<span>${maxRisk}</span></span>
     <span>Путь: <span class="value" id="graphPath">Старт</span></span>
   `;
@@ -1478,7 +1624,7 @@ function initGraphGame(container, difficulty = 'medium') {
   } else {
     optimalDisplay.innerHTML = `
       <span class="label">Лучший результат:</span>
-      <span class="value">$${optimalPath.cost}</span>
+      <span class="value">${optimalPath.cost} ₸</span>
       <div class="optimal-explanation" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Минимальная стоимость при риске ≤ ${maxRisk}</div>
     `;
   }
@@ -1493,22 +1639,36 @@ function initGraphGame(container, difficulty = 'medium') {
   console.log('[GRAPH] initGraphGame completed');
 }
 
-function generateRandomGraph(difficulty, containerWidth = 700, containerHeight = 450, minMoves = 2) {
-  console.log('[GENERATE] Starting with difficulty:', difficulty, 'minMoves:', minMoves);
-  
-  const nodeSize = 60;
-  const paddingX = 20;
-  const paddingTop = 140; // Increased to reserve top space
-  const reservedTop = 120; // Minimum y position
-  const reservedBottom = 160;
-  const usableWidth = Math.max(240, containerWidth - paddingX * 2 - nodeSize);
-  const usableHeight = Math.max(180, containerHeight - paddingTop - reservedBottom - nodeSize);
-  
-  const baseCount = difficulty === 'easy' ? 6 : difficulty === 'medium' ? 8 : 12;
-  const extraNodes = difficulty === 'easy' ? 1 + Math.floor(Math.random() * 2) : difficulty === 'medium' ? 2 + Math.floor(Math.random() * 3) : 3 + Math.floor(Math.random() * 3);
-  const nodeCount = Math.max(baseCount + extraNodes, minMoves + 2);
-  const pathLength = Math.max(minMoves, difficulty === 'easy' ? 2 : difficulty === 'medium' ? 3 : 5); // Hard min 5 moves
+function generateRandomGraph(difficulty, containerWidth = 700, containerHeight = 450, minMoves = 2, responsiveConfig = getResponsiveConfig()) {
+  console.log('[GENERATE] Starting with difficulty:', difficulty, 'containerWidth:', containerWidth, 'containerHeight:', containerHeight, 'minMoves:', minMoves);
+
+  const dimensions = getEffectiveDimensions(containerWidth, containerHeight);
+  const isMobile = window.innerWidth < RESPONSIVE_CONFIG.breakpoints.lg;
+  const effectiveWidth = dimensions.width;
+  const effectiveHeight = dimensions.height;
+
+  const nodeSize = responsiveConfig.nodeSize;
+  const paddingX = responsiveConfig.padding;
+  const paddingTop = isMobile ? 58 : 95;
+  const reservedTop = isMobile ? 45 : 85;
+  const reservedBottom = isMobile ? 62 : 115;
+  const usableWidth = Math.max(240, effectiveWidth - paddingX * 2 - nodeSize);
+  const usableHeight = Math.max(180, effectiveHeight - paddingTop - reservedBottom - nodeSize);
+
+  const difficultyExtra = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 3 : 8;
+  const difficultyPath = difficulty === 'easy' ? 2 : difficulty === 'medium' ? 4 : 7;
+  const baseNodeCount = 6 + Math.floor(difficultyExtra * responsiveConfig.multiplier);
+  const randomExtra = isMobile
+    ? 2 + Math.floor(Math.random() * 3)
+    : 1 + Math.floor(Math.random() * 4);
+  const pathLength = Math.max(minMoves, Math.ceil(difficultyPath * responsiveConfig.multiplier));
   const mainPathCount = pathLength + 1;
+  const desiredNodeCount = Math.max(baseNodeCount + randomExtra, mainPathCount + 1);
+  const maxNodesByArea = Math.max(
+    mainPathCount,
+    Math.floor((usableWidth * usableHeight) / Math.max(1, nodeSize * nodeSize * 2.2))
+  );
+  const nodeCount = Math.max(mainPathCount, Math.min(desiredNodeCount, maxNodesByArea));
   
   console.log('[GENERATE] Node count:', nodeCount, 'Main path length:', pathLength);
   
@@ -1517,58 +1677,84 @@ function generateRandomGraph(difficulty, containerWidth = 700, containerHeight =
   const usedIds = new Set();
   const positions = [];
   
-  // Create the guaranteed main path from S to F with intermediates
+  // Create the guaranteed main path from S to F with intermediates.
+  // Use non-linear placement so the route is not visually obvious.
+  const wavePhase = Math.random() * Math.PI * 2;
+  const waveAmplitude = Math.max(25, Math.min(usableHeight * 0.28, difficulty === 'hard' ? 130 : 95));
   for (let stage = 0; stage < mainPathCount; stage++) {
-    const x = paddingX + (usableWidth * stage) / (mainPathCount - 1);
-    const y = paddingTop + usableHeight * 0.5 + (Math.random() - 0.5) * (difficulty === 'hard' ? 90 : 50);
+    const progress = stage / Math.max(1, mainPathCount - 1);
+    const x = paddingX + (usableWidth * progress) + (Math.random() - 0.5) * (difficulty === 'hard' ? 34 : 26);
+    const waveOffset = Math.sin(progress * Math.PI * (difficulty === 'hard' ? 2.5 : 2) + wavePhase) * waveAmplitude;
+    const yBase = paddingTop + usableHeight * 0.5 + waveOffset;
+    const y = yBase + (Math.random() - 0.5) * (difficulty === 'hard' ? 85 : 55);
     positions.push({
-      x: Math.max(paddingX, Math.min(containerWidth - paddingX - nodeSize, x + (Math.random() - 0.5) * 20)),
-      y: Math.max(reservedTop, Math.min(containerHeight - reservedBottom - nodeSize, y)), // Respect reservedTop
+      x: Math.max(paddingX, Math.min(effectiveWidth - paddingX - nodeSize, x + (Math.random() - 0.5) * 20)),
+      y: Math.max(reservedTop, Math.min(effectiveHeight - reservedBottom - nodeSize, y)), // Respect reservedTop
       stage
     });
   }
   
   // Add extra nodes in the middle area so they don't interfere with info block
   for (let i = positions.length; i < nodeCount; i++) {
-    const stage = 1 + Math.floor(Math.random() * Math.max(1, mainPathCount - 2));
-    const x = paddingX + (usableWidth * stage) / (mainPathCount - 1) + (Math.random() - 0.5) * 140; // Increased
-    const y = paddingTop + usableHeight * (0.15 + Math.random() * 0.7);
+    let x, y;
+    let attempts = 0;
+    const maxAttempts = 1000; // Increased attempts to ensure placement
+    do {
+      const stage = 1 + Math.floor(Math.random() * Math.max(1, mainPathCount - 2));
+      x = paddingX + (usableWidth * stage) / (mainPathCount - 1) + (Math.random() - 0.5) * 140;
+      y = paddingTop + usableHeight * (0.15 + Math.random() * 0.7);
+      x = Math.max(paddingX, Math.min(effectiveWidth - paddingX - nodeSize, x));
+      y = Math.max(reservedTop, Math.min(effectiveHeight - reservedBottom - nodeSize, y));
+      attempts++;
+      // Check distance to all existing positions
+      const overlaps = positions.some(pos => {
+        const dx = pos.x - x;
+        const dy = pos.y - y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < nodeSize * 1.1; // Keep some visual gap between circles
+      });
+      if (!overlaps) break;
+    } while (attempts < maxAttempts);
+    if (attempts >= maxAttempts) {
+      console.warn('[GENERATE] Skipping extra node to avoid overlap');
+      continue;
+    }
     positions.push({
-      x: Math.max(paddingX, Math.min(containerWidth - paddingX - nodeSize, x)),
-      y: Math.max(reservedTop, Math.min(containerHeight - reservedBottom - nodeSize, y)), // Respect reservedTop
-      stage
+      x: x,
+      y: y,
+      stage: 1 + Math.floor(Math.random() * Math.max(1, mainPathCount - 2))
     });
   }
   
   // Ensure no overlapping nodes by checking distance - multiple passes
-  for (let pass = 0; pass < 10; pass++) { // Increased to 10 passes
+  for (let pass = 0; pass < 20; pass++) { // Increased to 20 passes
     for (let i = 0; i < positions.length; i++) {
       for (let j = i + 1; j < positions.length; j++) {
         const dx = positions[i].x - positions[j].x;
         const dy = positions[i].y - positions[j].y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 100) { // Increased minimum distance to 100
+        if (dist < nodeSize * 1.1) { // Minimum distance to prevent overlap
           // Move the second node away
           const angle = Math.random() * 2 * Math.PI;
-          positions[j].x += Math.cos(angle) * 60; // Increased move distance to 60
-          positions[j].y += Math.sin(angle) * 60;
+          positions[j].x += Math.cos(angle) * (nodeSize * 0.6);
+          positions[j].y += Math.sin(angle) * (nodeSize * 0.6);
           // Clamp to bounds
-          positions[j].x = Math.max(paddingX, Math.min(containerWidth - paddingX - nodeSize, positions[j].x));
-          positions[j].y = Math.max(reservedTop, Math.min(containerHeight - reservedBottom - nodeSize, positions[j].y)); // Respect reservedTop
+          positions[j].x = Math.max(paddingX, Math.min(effectiveWidth - paddingX - nodeSize, positions[j].x));
+          positions[j].y = Math.max(reservedTop, Math.min(effectiveHeight - reservedBottom - nodeSize, positions[j].y)); // Respect reservedTop
         }
       }
     }
   }
   
-  // Shuffle side nodes to vary layout while keeping main path order
+  // Keep S/F on guaranteed main path and only shuffle side nodes.
+  const mainPathPositions = positions.slice(0, mainPathCount);
   const sidePositions = positions.slice(mainPathCount).sort(() => Math.random() - 0.5);
-  const orderedPositions = positions.slice(0, mainPathCount).concat(sidePositions);
-  
-  for (let i = 0; i < orderedPositions.length; i++) {
+
+  for (let i = 0; i < mainPathPositions.length; i++) {
     let id;
     let attempts = 0;
     do {
-      id = i === 0 ? 'S' : i === orderedPositions.length - 1 ? 'F' : String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      id = i === 0 ? 'S' : i === mainPathPositions.length - 1 ? 'F' : String.fromCharCode(65 + Math.floor(Math.random() * 26));
       attempts++;
       if (attempts > 100) {
         console.error('[GENERATE] Could not generate unique ID for node', i);
@@ -1580,20 +1766,42 @@ function generateRandomGraph(difficulty, containerWidth = 700, containerHeight =
     
     const label = id === 'S' ? 'Старт' : id === 'F' ? 'Финиш' : id;
     const type = id === 'S' ? 'start' : id === 'F' ? 'end' : '';
-    const pos = orderedPositions[i];
+    const pos = mainPathPositions[i];
     nodes.push({ id, x: pos.x, y: pos.y, label, type, stage: pos.stage });
   }
+
+  sidePositions.forEach((pos, sideIndex) => {
+    let id;
+    let attempts = 0;
+    do {
+      id = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      attempts++;
+      if (attempts > 100) {
+        id = `X${sideIndex + mainPathPositions.length}`;
+        break;
+      }
+    } while (usedIds.has(id));
+    usedIds.add(id);
+    nodes.push({ id, x: pos.x, y: pos.y, label: id, type: '', stage: pos.stage });
+  });
   
   console.log('[GENERATE] Nodes created');
   
   const usedEdges = new Set();
   
-  // Guarantee the main path is present and preserves minimum move count
+  // Guarantee the main path is present and preserves minimum move count.
+  // Keep its cumulative risk under risk budget to avoid unsolvable generations.
+  let remainingRiskBudget = Math.max(2, Math.floor((difficulty === 'easy' ? 0.75 : difficulty === 'medium' ? 0.82 : 0.9) * (difficulty === 'easy' ? 6 : difficulty === 'medium' ? 10 : 20)));
+  const remainingStepsTotal = mainPathCount - 1;
   for (let i = 1; i < mainPathCount; i++) {
     const from = nodes[i - 1].id;
     const to = nodes[i].id;
-    const cost = 2 + Math.floor(Math.random() * (difficulty === 'hard' ? 6 : 4));
-    const risk = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 4 : 2)); // Reduced risk for main path
+    const cost = 3 + Math.floor(Math.random() * (difficulty === 'hard' ? 10 : 6));
+    const remainingSteps = remainingStepsTotal - i;
+    const maxRiskForStep = Math.max(1, remainingRiskBudget - remainingSteps);
+    const riskUpperBound = Math.max(1, Math.min(maxRiskForStep, difficulty === 'hard' ? 4 : difficulty === 'medium' ? 3 : 2));
+    const risk = 1 + Math.floor(Math.random() * riskUpperBound);
+    remainingRiskBudget -= risk;
     edges.push({ from, to, cost, risk });
     usedEdges.add(`${from}-${to}`);
     // Add reverse edge for undirected graph
@@ -1609,8 +1817,8 @@ function generateRandomGraph(difficulty, containerWidth = 700, containerHeight =
         const from = stageNodes[i].id;
         const to = stageNodes[j].id;
         if (!usedEdges.has(`${from}-${to}`)) {
-          const cost = 1 + Math.floor(Math.random() * 3);
-          const risk = 1 + Math.floor(Math.random() * 2);
+          const cost = 2 + Math.floor(Math.random() * (difficulty === 'hard' ? 8 : 4));
+          const risk = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 5 : 2));
           edges.push({ from, to, cost, risk });
           usedEdges.add(`${from}-${to}`);
           edges.push({ from: to, to: from, cost, risk });
@@ -1621,10 +1829,10 @@ function generateRandomGraph(difficulty, containerWidth = 700, containerHeight =
   }
   
   // Add optional side edges to connect more nodes
-  const maxExtra = difficulty === 'easy' ? 8 : difficulty === 'medium' ? 12 : 18; // Increased further
+  const maxExtra = isMobile ? (difficulty === 'easy' ? 12 : difficulty === 'medium' ? 17 : 20) : (difficulty === 'easy' ? 12 : difficulty === 'medium' ? 18 : 24);
   let extraAdded = 0;
   let attempts = 0;
-  while (extraAdded < maxExtra && attempts < 500) { // Increased attempts
+  while (extraAdded < maxExtra && attempts < 1000) { // Increased attempts
     const fromIndex = Math.floor(Math.random() * nodes.length);
     const toIndex = Math.floor(Math.random() * nodes.length);
     const fromNode = nodes[fromIndex];
@@ -1634,7 +1842,8 @@ function generateRandomGraph(difficulty, containerWidth = 700, containerHeight =
       continue;
     }
     const stageDiff = Math.abs((fromNode.stage || 0) - (toNode.stage || 0));
-    if (stageDiff > 4) { // Increased to 4
+    const maxStageDiff = difficulty === 'hard' ? 1 : (isMobile ? 3 : 4);
+    if (stageDiff > maxStageDiff) {
       attempts++;
       continue;
     }
@@ -1646,8 +1855,25 @@ function generateRandomGraph(difficulty, containerWidth = 700, containerHeight =
       attempts++;
       continue;
     }
-    const cost = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 5 : 3)); // Reduced range
-    const risk = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 2 : 1)); // Reduced risk for extra edges
+    // Prevent easy shortcuts to finish from early stages.
+    if (toNode.id === 'F' && (fromNode.stage || 0) < mainPathCount - 2) {
+      attempts++;
+      continue;
+    }
+    if (difficulty === 'hard' && toNode.id === 'F' && (fromNode.stage || 0) !== mainPathCount - 2) {
+      attempts++;
+      continue;
+    }
+    if (fromNode.id === 'S' && (toNode.stage || 0) > 2) {
+      attempts++;
+      continue;
+    }
+    if (difficulty === 'hard' && fromNode.id === 'S' && (toNode.stage || 0) > 1) {
+      attempts++;
+      continue;
+    }
+    const cost = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 15 : 6)); // Increased range
+    const risk = 1 + Math.floor(Math.random() * (difficulty === 'hard' ? 10 : 4)); // Increased risk range
     edges.push({ from: fromNode.id, to: toNode.id, cost, risk });
     usedEdges.add(`${fromNode.id}-${toNode.id}`);
     // Add reverse edge for undirected graph
@@ -1727,19 +1953,12 @@ function findOptimalPath(nodes, edges, maxRisk) {
   
   const dist = {};
   const prev = {};
-  const risk = {};
   const pq = new MinHeap();
   const visited = new Set();
-  
-  // Initialize
-  nodes.forEach(node => {
-    dist[node.id] = node.id === 'S' ? 0 : Infinity;
-    risk[node.id] = node.id === 'S' ? 0 : Infinity;
-    prev[node.id] = null;
-    if (node.id === 'S') {
-      pq.enqueue(node.id, 0);
-    }
-  });
+  const startKey = 'S|0';
+  dist[startKey] = 0;
+  prev[startKey] = null;
+  pq.enqueue({ node: 'S', risk: 0, key: startKey }, 0);
   
   let iterations = 0;
   while (!pq.isEmpty()) {
@@ -1749,46 +1968,165 @@ function findOptimalPath(nodes, edges, maxRisk) {
       break;
     }
     
-    const { element: current } = pq.dequeue();
-    
-    if (visited.has(current)) continue;
-    visited.add(current);
-    
-    if (dist[current] === Infinity) break;
-    
-    // Use adjacency list instead of filtering
-    (adj[current] || []).forEach(edge => {
-      if (visited.has(edge.to)) return;
-      
-      const newCost = dist[current] + edge.cost;
-      const newRisk = risk[current] + edge.risk;
-      
-      if (newRisk <= maxRisk && newCost < dist[edge.to]) {
-        dist[edge.to] = newCost;
-        risk[edge.to] = newRisk;
-        prev[edge.to] = current;
-        pq.enqueue(edge.to, newCost);
+    const { element: currentState } = pq.dequeue();
+    const { node: currentNode, risk: currentRisk, key: currentKey } = currentState;
+
+    if (visited.has(currentKey)) continue;
+    visited.add(currentKey);
+
+    const currentCost = dist[currentKey];
+    if (!Number.isFinite(currentCost)) continue;
+
+    (adj[currentNode] || []).forEach(edge => {
+      const newRisk = currentRisk + edge.risk;
+      if (newRisk > maxRisk) return;
+
+      const nextKey = `${edge.to}|${newRisk}`;
+      const newCost = currentCost + edge.cost;
+      if (dist[nextKey] === undefined || newCost < dist[nextKey]) {
+        dist[nextKey] = newCost;
+        prev[nextKey] = currentKey;
+        pq.enqueue({ node: edge.to, risk: newRisk, key: nextKey }, newCost);
       }
     });
   }
   
   console.log('[DIJKSTRA] Completed in', iterations, 'iterations');
   
-  // Reconstruct path
-  const path = [];
-  let current = 'F';
-  while (current !== null) {
-    path.unshift(current);
-    current = prev[current];
+  let bestEndKey = null;
+  let bestCost = Infinity;
+  let bestRisk = 0;
+  for (let r = 0; r <= maxRisk; r++) {
+    const key = `F|${r}`;
+    if (dist[key] !== undefined && dist[key] < bestCost) {
+      bestCost = dist[key];
+      bestEndKey = key;
+      bestRisk = r;
+    }
   }
-  
-  if (path[0] !== 'S' || dist['F'] === Infinity) {
+
+  if (!bestEndKey) {
     console.log('[DIJKSTRA] No path found');
     return { cost: Infinity, risk: 0, path: [] };
   }
-  
-  console.log('[DIJKSTRA] Path found:', path, 'cost:', dist['F']);
-  return { cost: dist['F'], risk: risk['F'], path };
+
+  const path = [];
+  let currentKey = bestEndKey;
+  while (currentKey) {
+    const [nodeId] = currentKey.split('|');
+    path.unshift(nodeId);
+    currentKey = prev[currentKey];
+  }
+
+  if (path[0] !== 'S') {
+    console.log('[DIJKSTRA] Invalid reconstructed path');
+    return { cost: Infinity, risk: 0, path: [] };
+  }
+
+  console.log('[DIJKSTRA] Path found:', path, 'cost:', bestCost, 'risk:', bestRisk);
+  return { cost: bestCost, risk: bestRisk, path };
+}
+
+function findMinimumHopsWithinRisk(nodes, edges, maxRisk) {
+  const adj = {};
+  edges.forEach(edge => {
+    if (!adj[edge.from]) adj[edge.from] = [];
+    adj[edge.from].push(edge);
+  });
+
+  const queue = [{ node: 'S', risk: 0, hops: 0 }];
+  const bestHops = { 'S|0': 0 };
+  let minHops = Infinity;
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current.hops >= minHops) continue;
+    if (current.node === 'F') {
+      minHops = Math.min(minHops, current.hops);
+      continue;
+    }
+
+    (adj[current.node] || []).forEach(edge => {
+      const newRisk = current.risk + edge.risk;
+      if (newRisk > maxRisk) return;
+      const newHops = current.hops + 1;
+      const key = `${edge.to}|${newRisk}`;
+      if (bestHops[key] !== undefined && bestHops[key] <= newHops) return;
+      bestHops[key] = newHops;
+      queue.push({ node: edge.to, risk: newRisk, hops: newHops });
+    });
+  }
+
+  return minHops;
+}
+
+function generateValidatedGraph(difficulty, graphWidth, graphHeight, minMoves, maxRisk, responsiveConfig) {
+  let bestCandidate = null;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const candidate = generateRandomGraph(difficulty, graphWidth, graphHeight, minMoves, responsiveConfig);
+    const optimalPath = findOptimalPath(candidate.nodes, candidate.edges, maxRisk);
+    const minHops = findMinimumHopsWithinRisk(candidate.nodes, candidate.edges, maxRisk);
+    if (optimalPath.cost === Infinity || minHops === Infinity) continue;
+    const isComplexEnough = isGraphComplexEnough(candidate.nodes, candidate.edges, maxRisk, optimalPath.path, difficulty);
+
+    if (minHops >= minMoves && isComplexEnough) {
+      return { nodes: candidate.nodes, edges: candidate.edges, optimalPath };
+    }
+
+    if (
+      !bestCandidate ||
+      minHops > bestCandidate.minHops ||
+      (minHops === bestCandidate.minHops && isComplexEnough && !bestCandidate.isComplexEnough)
+    ) {
+      bestCandidate = { ...candidate, optimalPath, minHops, isComplexEnough };
+    }
+  }
+
+  const minFallbackHops = difficulty === 'hard' ? Math.max(5, minMoves - 1) : Math.max(3, minMoves - 2);
+  if (bestCandidate && bestCandidate.minHops >= minFallbackHops) {
+    console.warn('[GRAPH] Using best fallback candidate with min hops:', bestCandidate.minHops);
+    return { nodes: bestCandidate.nodes, edges: bestCandidate.edges, optimalPath: bestCandidate.optimalPath };
+  }
+
+  // Last-resort safe fallback to avoid initialization failures.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const candidate = generateRandomGraph(difficulty, graphWidth, graphHeight, Math.max(3, minMoves - 2), responsiveConfig);
+    const optimalPath = findOptimalPath(candidate.nodes, candidate.edges, maxRisk);
+    const minHops = findMinimumHopsWithinRisk(candidate.nodes, candidate.edges, maxRisk);
+    if (optimalPath.cost !== Infinity && minHops !== Infinity) {
+      console.warn('[GRAPH] Using emergency fallback candidate with min hops:', minHops);
+      return { nodes: candidate.nodes, edges: candidate.edges, optimalPath };
+    }
+  }
+
+  throw new Error('Graph generation failed: no solvable puzzle found');
+}
+
+function isGraphComplexEnough(nodes, edges, maxRisk, optimalPath, difficulty) {
+  if (!Array.isArray(optimalPath) || optimalPath.length < 2) return false;
+
+  const adj = {};
+  edges.forEach(edge => {
+    if (!adj[edge.from]) adj[edge.from] = [];
+    adj[edge.from].push(edge);
+  });
+
+  // Require meaningful choice at start.
+  const startChoices = (adj.S || []).filter(edge => edge.risk <= maxRisk).length;
+  const minStartChoices = difficulty === 'hard' ? 3 : difficulty === 'medium' ? 2 : 1;
+  if (startChoices < minStartChoices) return false;
+
+  // Require at least one non-optimal alternative on early optimal path steps.
+  const checkDepth = difficulty === 'hard' ? 4 : difficulty === 'medium' ? 3 : 2;
+  let branchPoints = 0;
+  for (let i = 0; i < Math.min(checkDepth, optimalPath.length - 1); i++) {
+    const nodeId = optimalPath[i];
+    const nextOptimal = optimalPath[i + 1];
+    const alternatives = (adj[nodeId] || []).filter(edge => edge.risk <= maxRisk && edge.to !== nextOptimal && edge.to !== 'S');
+    if (alternatives.length > 0) branchPoints++;
+  }
+  const minBranchPoints = difficulty === 'hard' ? 3 : difficulty === 'medium' ? 2 : 1;
+  return branchPoints >= minBranchPoints;
 }
 
 function highlightAvailable(container, graphState, adjMap, maxRisk) {
@@ -1887,7 +2225,7 @@ function handleGraphClick(nodeId, nodes, adjMap, graphState, container, maxRisk,
   highlightAvailable(container, graphState, adjMap, maxRisk);
   
   // Update info
-  document.getElementById('graphCost').textContent = '$' + graphState.totalCost;
+  document.getElementById('graphCost').textContent = graphState.totalCost + ' ₸';
   const riskEl = document.getElementById('graphRisk');
   riskEl.textContent = graphState.totalRisk;
   
@@ -1908,7 +2246,7 @@ function handleGraphClick(nodeId, nodes, adjMap, graphState, container, maxRisk,
   updateMovesCount();
   updateGraphProgress(graphState, nodes);
   
-  logTerminal(`[EVENT]: Перешли к ${nodes.find(n => n.id === nodeId).label}. Стоимость: +$${edge.cost}, Риск: +${edge.risk}`, 'event');
+  logTerminal(`[EVENT]: Перешли к ${nodes.find(n => n.id === nodeId).label}. Стоимость: +${edge.cost} ₸, Риск: +${edge.risk}`, 'event');
   
   // Check win
   if (nodeId === 'F') {
@@ -1926,16 +2264,16 @@ function handleGraphWin(graphState, optimalPath) {
     logTerminal('[SUCCESS]: Оптимальный путь найден!', 'success');
     state.sessionData.algorithmic = 100;
   } else if (costDiff <= 3) {
-    showToast(`Отлично! Ваш путь на $${costDiff} дороже оптимального`, 'success');
-    logTerminal(`[SUCCESS]: Хороший путь! На $${costDiff} дороже оптимального.`, 'success');
+    showToast(`Отлично! Ваш путь на ${costDiff} ₸ дороже оптимального`, 'success');
+    logTerminal(`[SUCCESS]: Хороший путь! На ${costDiff} ₸ дороже оптимального.`, 'success');
     state.sessionData.algorithmic = 80;
   } else {
-    showToast(`Путь найден, но на $${costDiff} дороже оптимального`, 'info');
-    logTerminal(`[INFO]: Путь на $${costDiff} дороже оптимального.`, 'warning');
+    showToast(`Путь найден, но на ${costDiff} ₸ дороже оптимального`, 'info');
+    logTerminal(`[INFO]: Путь на ${costDiff} ₸ дороже оптимального.`, 'warning');
     state.sessionData.algorithmic = 60;
   }
   
-  logTerminal(`[STATS]: Ваша стоимость: $${graphState.totalCost}, Оптимальная: $${optimalPath.cost}`, 'event');
+  logTerminal(`[STATS]: Ваша стоимость: ${graphState.totalCost} ₸, Оптимальная: ${optimalPath.cost} ₸`, 'event');
   
   handleWin('graph');
 }
@@ -1971,20 +2309,11 @@ function handleWin(modelType) {
   }
   
   state.solvedTasks++;
-  
+
+  const solvedMoves = state.moves;
   const taskTime = Date.now() - state.sessionStart;
   state.totalTaskTime += taskTime;
   const elapsed = Math.floor(taskTime / 1000);
-  const efficiency = Math.max(0, 100 - state.moves * 2);
-  
-  // Update session data based on performance
-  state.sessionData.speed = Math.min(100, Math.round(180 / Math.max(elapsed, 1) * 100));
-  state.sessionData.accuracy = Math.min(100, efficiency + 20);
-  state.sessionData.logic = Math.min(100, 50 + state.solvedTasks * 15);
-  
-  if (modelType !== 'graph') {
-    state.sessionData.algorithmic = Math.min(100, 40 + efficiency * 0.6);
-  }
   
   // Update solved models
   const difficulty = state[`${modelType}Difficulty`];
@@ -1995,15 +2324,18 @@ function handleWin(modelType) {
     state.solvedModels[modelType].stars = currentStars;
   }
   
-  // Add to history before resetting moves
-  if (state.moves > 0) {
-    state.modelHistory[modelType].push({
-      time: taskTime,
-      moves: state.moves,
-      difficulty: difficulty,
-      solved: true
-    });
-  }
+  // Add to history before resetting moves (store every solved attempt)
+  const attempt = {
+    modelType,
+    time: taskTime,
+    moves: solvedMoves,
+    difficulty: difficulty,
+    solved: true,
+    timestamp: Date.now(),
+    // Snapshot algorithmic score at the moment of win (graph sets it in handleGraphWin)
+    algorithmic: modelType === 'graph' ? state.sessionData.algorithmic : null
+  };
+  state.modelHistory[modelType].push(attempt);
   
   // Reset progress immediately after win
   state.progress = 0;
@@ -2014,12 +2346,81 @@ function handleWin(modelType) {
     showToast('Поздравляем! Модель решена!', 'success');
   }
   
-  logTerminal(`[STATS]: Время: ${elapsed}s, Ходов: ${state.moves}`);
+  logTerminal(`[STATS]: Время: ${elapsed}s, Ходов: ${solvedMoves}`);
   
+  // Recompute session stats from full history
+  state.sessionData = computeSessionDataFromHistory(state.modelHistory);
+
   saveToStorage();
   
   // Immediately navigate to statistics after win
   navigateTo('statistics');
+  setTimeout(() => {
+    showCompletionModal(modelType, {
+      difficulty,
+      elapsed,
+      moves: solvedMoves
+    });
+  }, 280);
+}
+
+function computeSessionDataFromHistory(modelHistory) {
+  const attempts = []
+    .concat(modelHistory.matrix || [], modelHistory.rings || [], modelHistory.graph || [])
+    .filter(a => a && a.solved);
+
+  if (attempts.length === 0) {
+    return { totalTime: 0, accuracy: 0, speed: 0, logic: 0, algorithmic: 0 };
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+  const timeBaselineSec = {
+    matrix: { easy: 80, medium: 130, hard: 190 },
+    rings: { easy: 90, medium: 150, hard: 220 },
+    graph: { easy: 110, medium: 190, hard: 280 }
+  };
+
+  const moveBaseline = {
+    matrix: { easy: 10, medium: 16, hard: 24 },
+    rings: { easy: 9, medium: 14, hard: 22 },
+    graph: { easy: 7, medium: 11, hard: 18 }
+  };
+
+  const perAttemptScores = attempts.map(a => {
+    const difficulty = a.difficulty || 'medium';
+    const seconds = Math.max(1, Math.floor((a.time || 0) / 1000));
+    const moves = Math.max(0, Number(a.moves ?? 0));
+    const model = ['matrix', 'rings', 'graph'].includes(a.modelType) ? a.modelType : 'matrix';
+
+    const baseT = (timeBaselineSec[model] && timeBaselineSec[model][difficulty]) || timeBaselineSec[model].medium;
+    const baseM = (moveBaseline[model] && moveBaseline[model][difficulty]) || moveBaseline[model].medium;
+
+    const speed = clamp(Math.round((baseT / seconds) * 100), 10, 100);
+    const accuracy = moves === 0 ? 100 : clamp(Math.round((baseM / moves) * 100), 5, 100);
+
+    // Logic is a stability proxy: average of speed/accuracy with mild penalty for extreme moves.
+    const movePenalty = clamp(Math.round((moves - baseM) * 2), 0, 30);
+    const logic = clamp(Math.round((speed + accuracy) / 2) - movePenalty, 5, 100);
+
+    // Algorithmic: use graph's actual value; otherwise use accuracy as proxy.
+    const algorithmic =
+      typeof a.algorithmic === 'number'
+        ? clamp(Math.round(a.algorithmic), 0, 100)
+        : clamp(Math.round(accuracy * 0.9 + logic * 0.1), 0, 100);
+
+    return { speed, accuracy, logic, algorithmic };
+  });
+
+  const avg = key => Math.round(perAttemptScores.reduce((s, x) => s + x[key], 0) / perAttemptScores.length);
+
+  return {
+    totalTime: attempts.reduce((s, a) => s + (a.time || 0), 0),
+    speed: avg('speed'),
+    accuracy: avg('accuracy'),
+    logic: avg('logic'),
+    algorithmic: avg('algorithmic')
+  };
 }
 
 // ===== Help Modal Functions =====
@@ -2056,6 +2457,75 @@ function showHelpModal(modelType) {
 
 function closeHelpModal() {
   const overlay = document.getElementById('helpModalOverlay');
+  overlay.classList.remove('active');
+}
+
+function showCompletionModal(modelType, stats) {
+  const overlay = document.getElementById('completionModalOverlay');
+  const title = document.getElementById('completionModalTitle');
+  const content = document.getElementById('completionModalContent');
+  if (!overlay || !title || !content) return;
+
+  const descriptors = {
+    matrix: {
+      model: 'Матричная инверсия',
+      service: 'Google Photos',
+      action: 'вы синхронизировали состояние сетки через серию XOR-операций',
+      whyCool: 'Это похоже на массовое применение правил к данным: одно действие влияет на группу зависимых элементов, и важно учитывать цепные эффекты.',
+      serviceHow: 'В сервисах наподобие Google Photos похожая логика нужна при пакетной обработке изображений: фильтры, метки и состояния применяются последовательно, а система должна сохранять согласованность итогового состояния.'
+    },
+    rings: {
+      model: 'Вложенные циклы',
+      service: 'Spotify / YouTube',
+      action: 'вы выровняли взаимозависимые кольца, где каждое вращение влияет на соседние уровни',
+      whyCool: 'Это тренирует мышление о каскадных эффектах: локальное изменение может сдвигать всю систему.',
+      serviceHow: 'В стриминговых сервисах похожий принцип возникает в пайплайнах рекомендаций и ранжирования: изменение одного фактора может перестраивать итоговую выдачу и приоритеты контента.'
+    },
+    graph: {
+      model: 'Поиск пути в графе',
+      service: 'Kaspi.kz Antifraud',
+      action: 'вы построили маршрут с балансом стоимости и риска в ограниченной сети',
+      whyCool: 'Это реальная задача принятия решений под ограничениями, где нужен не просто короткий путь, а оптимальный путь с учетом риска.',
+      serviceHow: 'В antifraud-системах Kaspi-подобного класса транзакции анализируются как граф связей: система ищет безопасные маршруты и паттерны, минимизируя риск при сохранении эффективности операций.'
+    }
+  };
+
+  const info = descriptors[modelType];
+  if (!info) return;
+
+  const difficultyLabel = getDifficultyLabel(stats.difficulty || 'medium');
+  title.textContent = `Решение завершено: ${info.model}`;
+  content.innerHTML = `
+    <div class="completion-highlight">
+      Вы только что решили задачу модели <strong>${info.model}</strong> — ${info.action}.
+    </div>
+    <div class="completion-metrics">
+      <div class="completion-metric">
+        <span class="label">Сложность</span>
+        <span class="value">${difficultyLabel}</span>
+      </div>
+      <div class="completion-metric">
+        <span class="label">Время</span>
+        <span class="value">${stats.elapsed} c</span>
+      </div>
+      <div class="completion-metric">
+        <span class="label">Ходы</span>
+        <span class="value">${stats.moves}</span>
+      </div>
+    </div>
+    <p><strong>Почему это круто:</strong> ${info.whyCool}</p>
+    <div class="service-block">
+      <h3>Как это работает в ${info.service}</h3>
+      <p>${info.serviceHow}</p>
+    </div>
+  `;
+
+  overlay.classList.add('active');
+}
+
+function closeCompletionModal() {
+  const overlay = document.getElementById('completionModalOverlay');
+  if (!overlay) return;
   overlay.classList.remove('active');
 }
 
@@ -2146,6 +2616,21 @@ function initWorkspace() {
       closeHelpModal();
     }
   });
+
+  // Completion modal close handlers
+  document.getElementById('completionModalClose').addEventListener('click', () => {
+    closeCompletionModal();
+  });
+
+  document.getElementById('completionModalOK').addEventListener('click', () => {
+    closeCompletionModal();
+  });
+
+  document.getElementById('completionModalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('completionModalOverlay')) {
+      closeCompletionModal();
+    }
+  });
 }
 
 function undoMatrixMove(previousMatrix) {
@@ -2176,10 +2661,10 @@ function undoRingsMove(previousRotations) {
   const ringsContainer = canvas.querySelector('.rings-container');
   const rings = canvas.ringsData;
   
-  previousRotations.forEach((rotation, index) => {
-    rings[index].rotation = rotation;
+  previousRotations.forEach((step, index) => {
+    rings[index].step = step;
     const ringEl = ringsContainer.children[index];
-    ringEl.style.transform = `rotate(${rotation}deg)`;
+    ringEl.style.transform = `rotate(${getRingRotationDeg(rings[index])}deg)`;
   });
   
   updateRingsProgress(rings);
@@ -2224,7 +2709,7 @@ function undoGraphMove(previousState) {
   highlightAvailable(container, graphData.graphState, graphData.adjMap, graphData.maxRisk);
   
   // Update info
-  document.getElementById('graphCost').textContent = '$' + previousState.totalCost;
+  document.getElementById('graphCost').textContent = previousState.totalCost + ' ₸';
   document.getElementById('graphRisk').textContent = previousState.totalRisk;
   
   const pathLabels = previousState.path.map(id => {
@@ -2388,7 +2873,12 @@ function renderTerms(terms) {
     `;
     
     card.querySelector('.term-header').addEventListener('click', () => {
-      card.classList.toggle('expanded');
+      const isExpanded = card.classList.contains('expanded');
+      // Accordion: close others when opening this one
+      grid.querySelectorAll('.term-card.expanded').forEach(other => {
+        if (other !== card) other.classList.remove('expanded');
+      });
+      card.classList.toggle('expanded', !isExpanded);
     });
     
     grid.appendChild(card);
@@ -2409,8 +2899,7 @@ function initStatistics() {
   
   // Close model details
   document.getElementById('closeModelDetails').addEventListener('click', () => {
-    document.getElementById('modelDetailsSection').style.display = 'none';
-    document.querySelector('.models-section').style.display = 'block';
+    hideModelDetails();
   });
   
   document.getElementById('exportPDF').addEventListener('click', exportToPDF);
@@ -2454,12 +2943,31 @@ function showModelDetails(model) {
     }).join('');
   }
   
-  // Hide models section and show details
-  modelsSection.style.display = 'none';
+  // Hide models section and show details with smooth transition
+  modelsSection.classList.add('is-hidden');
   section.style.display = 'block';
+  requestAnimationFrame(() => {
+    section.classList.add('is-visible');
+  });
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideModelDetails() {
+  const section = document.getElementById('modelDetailsSection');
+  const modelsSection = document.querySelector('.models-section');
+  if (!section || !modelsSection) return;
+
+  section.classList.remove('is-visible');
+  setTimeout(() => {
+    section.style.display = 'none';
+    modelsSection.classList.remove('is-hidden');
+  }, 220);
 }
 
 function updateStatistics() {
+  // Always recompute from full history for consistency
+  state.sessionData = computeSessionDataFromHistory(state.modelHistory);
+
   // Calculate total task time
   const totalSeconds = Math.floor(state.totalTaskTime / 1000);
   const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');

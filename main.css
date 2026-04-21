@@ -37,6 +37,25 @@
   --transition-slow: 0.5s ease;
   
   --font-mono: 'SF Mono', 'Fira Code', monospace;
+
+  /* Responsive breakpoints for synchronized CSS/JS graph scaling */
+  --bp-xs: 320px;
+  --bp-sm: 480px;
+  --bp-md: 640px;
+  --bp-lg: 768px;
+  --bp-xl: 1024px;
+  --bp-2xl: 1200px;
+
+  /* Graph sizing tokens */
+  --graph-container-width: 760px;
+  --graph-container-height: 560px;
+  --graph-padding: 1rem;
+  --graph-node-size: 62px;
+  --graph-node-font-size: 1rem;
+  --graph-edge-label-font: 0.8rem;
+  --graph-info-font-size: 0.9rem;
+  --graph-legend-font-size: 0.75rem;
+  --graph-optimal-font-size: 0.85rem;
 }
 
 /* ===== Reset & Base ===== */
@@ -48,6 +67,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -57,6 +77,21 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+/* Prevent rare horizontal scroll from grid/sidebar widths */
+.workspace-layout {
+  max-width: 100vw;
+  overflow-x: hidden;
+  grid-template-columns: minmax(0, var(--sidebar-left-width, 220px)) minmax(0, 1fr) minmax(0, var(--sidebar-right-width, 280px));
+}
+
+.canvas-container {
+  min-width: 0;
+}
+
+.sidebar {
+  max-width: min(420px, 46vw);
 }
 
 /* ===== Header ===== */
@@ -1217,6 +1252,9 @@ body {
   padding: 1rem;
   font-size: 0.9rem;
   color: var(--text-primary);
+  max-height: 34vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .goal-callout {
@@ -1365,6 +1403,7 @@ body {
   padding: 0.5rem;
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .canvas-placeholder {
@@ -1389,6 +1428,8 @@ body {
   border: 1px solid var(--border-color);
   margin: 0 auto;
   width: fit-content;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .matrix-cell {
@@ -1434,6 +1475,8 @@ body {
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.5s ease;
+  overflow: clip;
+  contain: layout paint;
 }
 
 .ring {
@@ -1447,7 +1490,7 @@ body {
 .ring:hover {
   border-color: var(--accent-primary);
   filter: brightness(1.2);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.45);
 }
 
 .ring-sector {
@@ -1493,12 +1536,27 @@ body {
   white-space: nowrap;
 }
 
+.rings-top-marker {
+  position: absolute;
+  top: var(--rings-top-marker-offset, -12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: var(--rings-arrow-half, 14px) solid transparent;
+  border-right: var(--rings-arrow-half, 14px) solid transparent;
+  border-top: var(--rings-arrow-height, 20px) solid var(--accent-success);
+  z-index: 20;
+  pointer-events: none;
+}
+
 /* ===== Graph Game - LARGER & CLEARER ===== */
 .graph-container {
   position: relative;
-  width: 760px;
-  height: 560px;
-  padding: 1rem 1rem 5.5rem;
+  width: min(100%, var(--graph-container-width));
+  height: min(var(--graph-container-height), calc(100vh - 150px));
+  min-height: 340px;
+  padding: var(--graph-padding) var(--graph-padding) calc(var(--graph-padding) * 5.5);
   background: var(--bg-glass);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -1507,8 +1565,8 @@ body {
 
 .graph-node {
   position: absolute;
-  width: 60px;
-  height: 60px;
+  width: var(--graph-node-size);
+  height: var(--graph-node-size);
   background: var(--bg-secondary);
   border: 3px solid var(--border-color);
   border-radius: 50%;
@@ -1518,7 +1576,7 @@ body {
   cursor: pointer;
   transition: var(--transition-fast);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: var(--graph-node-font-size);
   z-index: 10;
 }
 
@@ -1586,7 +1644,7 @@ body {
 
 .graph-edge-label {
   position: absolute;
-  font-size: 0.8rem;
+  font-size: var(--graph-edge-label-font);
   padding: 4px 10px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -1615,7 +1673,7 @@ body {
   padding: 0.75rem 1rem;
   background: var(--bg-secondary);
   border-radius: var(--radius-sm);
-  font-size: 0.9rem;
+  font-size: var(--graph-info-font-size);
   border: 1px solid var(--border-color);
   z-index: 30;
 }
@@ -1647,7 +1705,7 @@ body {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: var(--graph-legend-font-size);
   z-index: 30;
 }
 
@@ -1681,7 +1739,7 @@ body {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid var(--accent-success);
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: var(--graph-optimal-font-size);
   z-index: 30;
 }
 
@@ -1921,6 +1979,7 @@ body {
   margin: 0 auto;
   max-width: 1400px;
   padding: 2rem;
+  overflow-x: hidden;
 }
 
 .stats-header {
@@ -1934,6 +1993,50 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   margin-bottom: 3rem;
+}
+
+@media (max-width: 1024px) {
+  .statistics-container {
+    padding: 1.25rem;
+  }
+
+  .stats-layout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .chart-card {
+    align-items: stretch;
+  }
+
+  .chart-card canvas {
+    width: 100%;
+    height: auto;
+  }
+
+  .metric-item {
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+    align-items: flex-start;
+  }
+
+  .metric-value {
+    font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .statistics-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .models-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-card {
+    padding: 1.1rem;
+  }
 }
 
 .stats-left, .stats-right {
@@ -2278,18 +2381,12 @@ body {
 
 /* Large screens (> 1200px) */
 @media (min-width: 1201px) {
-  .rings-container {
-    width: 520px !important;
-    height: 520px !important;
-  }
+  /* Size is controlled by JS for better responsiveness */
 }
 
 /* Landscape orientation on mobile */
 @media (max-height: 600px) and (orientation: landscape) {
-  .rings-container {
-    width: 300px !important;
-    height: 300px !important;
-  }
+  /* Size is controlled by JS for better responsiveness */
   
   .ring {
     border-width: 2px;
@@ -2435,14 +2532,90 @@ body {
   gap: 1rem;
 }
 
+/* Completion modal content blocks */
+.completion-modal .completion-highlight {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1rem;
+  margin: 0.5rem 0 1rem 0;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.completion-modal .completion-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.completion-modal .completion-metric {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem;
+}
+
+.completion-modal .completion-metric .label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.completion-modal .completion-metric .value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.completion-modal .service-block {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-primary);
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .completion-modal .completion-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 1200px) {
+  :root {
+    --graph-container-width: 92vw;
+    --graph-container-height: 620px;
+    --graph-padding: 1rem;
+    --graph-node-size: 62px;
+    --graph-node-font-size: 0.95rem;
+    --graph-edge-label-font: 0.8rem;
+    --graph-info-font-size: 0.86rem;
+    --graph-legend-font-size: 0.74rem;
+    --graph-optimal-font-size: 0.84rem;
+  }
+
   .cards-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 1024px) {
+  :root {
+    --graph-container-width: 85vw;
+    --graph-container-height: 600px;
+    --graph-padding: 0.9rem;
+    --graph-node-size: 58px;
+    --graph-node-font-size: 0.95rem;
+    --graph-edge-label-font: 0.75rem;
+    --graph-info-font-size: 0.82rem;
+    --graph-legend-font-size: 0.7rem;
+    --graph-optimal-font-size: 0.8rem;
+  }
+
   .workspace-layout {
     grid-template-columns: 1fr;
     height: auto;
@@ -2450,6 +2623,11 @@ body {
   
   .sidebar {
     display: none;
+  }
+
+  /* When sidebars are hidden, keep a back button visible */
+  #backButtonMobile {
+    display: flex !important;
   }
   
   .canvas {
@@ -2473,10 +2651,7 @@ body {
   }
   
   /* Rings responsive for tablets */
-  .rings-container {
-    width: 400px !important;
-    height: 400px !important;
-  }
+  /* Size is controlled by JS for better responsiveness */
   
   .ring {
     border-width: 3px;
@@ -2486,6 +2661,20 @@ body {
     width: 45px;
     height: 45px;
     font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --graph-container-width: 92vw;
+    --graph-container-height: 590px;
+    --graph-padding: 0.75rem;
+    --graph-node-size: 54px;
+    --graph-node-font-size: 0.9rem;
+    --graph-edge-label-font: 0.72rem;
+    --graph-info-font-size: 0.76rem;
+    --graph-legend-font-size: 0.68rem;
+    --graph-optimal-font-size: 0.74rem;
   }
 }
 
@@ -2546,16 +2735,7 @@ body {
     }
   }
   
-  .graph-container {
-    width: 100%;
-    max-width: 400px;
-    height: 350px;
-  }
-  
-  .rings-container {
-    width: 340px !important;
-    height: 340px !important;
-  }
+  /* Rings size is controlled by JS for better responsiveness */
   
   .ring {
     border-width: 3px;
@@ -2622,8 +2802,34 @@ body {
   }
 }
 
+@media (max-width: 640px) {
+  :root {
+    --graph-container-width: 90vw;
+    --graph-container-height: 560px;
+    --graph-padding: 0.65rem;
+    --graph-node-size: 48px;
+    --graph-node-font-size: 0.82rem;
+    --graph-edge-label-font: 0.68rem;
+    --graph-info-font-size: 0.72rem;
+    --graph-legend-font-size: 0.64rem;
+    --graph-optimal-font-size: 0.72rem;
+  }
+}
+
 /* Extra small devices (< 480px) */
 @media (max-width: 480px) {
+  :root {
+    --graph-container-width: 94vw;
+    --graph-container-height: 520px;
+    --graph-padding: 0.55rem;
+    --graph-node-size: 44px;
+    --graph-node-font-size: 0.78rem;
+    --graph-edge-label-font: 0.64rem;
+    --graph-info-font-size: 0.68rem;
+    --graph-legend-font-size: 0.62rem;
+    --graph-optimal-font-size: 0.68rem;
+  }
+
   .matrix-cell {
     width: 60px !important;
     height: 60px !important;
@@ -2649,15 +2855,30 @@ body {
     grid-template-columns: 1fr !important;
   }
 
+  .graph-legend {
+    padding: 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .optimal-path-display {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .optimal-path-display .label {
+    font-size: 0.65rem;
+  }
+
+  .optimal-path-display .value {
+    font-size: 0.9rem;
+  }
+
   #backButtonMobile {
     display: flex !important;
   }
   
   /* Rings responsive for small screens */
-  .rings-container {
-    width: 260px !important;
-    height: 260px !important;
-  }
+  /* Size is controlled by JS for better responsiveness */
   
   .ring {
     border-width: 2px;
@@ -2674,6 +2895,38 @@ body {
     top: -25px;
     padding: 0.25rem 0.5rem;
     font-size: 0.6rem;
+  }
+}
+
+/* Very small devices (< 414px) */
+@media (max-width: 414px) {
+  :root {
+    --graph-container-width: 96vw;
+    --graph-container-height: 460px;
+    --graph-padding: 0.45rem;
+    --graph-node-size: 38px;
+    --graph-node-font-size: 0.68rem;
+    --graph-edge-label-font: 0.55rem;
+    --graph-info-font-size: 0.62rem;
+    --graph-legend-font-size: 0.58rem;
+    --graph-optimal-font-size: 0.64rem;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --graph-container-height: 90vh;
+    --graph-padding: 0.45rem;
+    --graph-node-size: 42px;
+    --graph-node-font-size: 0.7rem;
+    --graph-edge-label-font: 0.58rem;
+    --graph-info-font-size: 0.62rem;
+    --graph-legend-font-size: 0.58rem;
+    --graph-optimal-font-size: 0.64rem;
+  }
+
+  .graph-container {
+    max-height: 500px;
   }
 }
 
@@ -2717,6 +2970,9 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
 .model-details-section h3 {
@@ -2725,7 +2981,20 @@ body {
   color: var(--text-primary);
 }
 
+.model-details-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.models-section {
+  transition: opacity 0.18s ease;
+}
+
+.models-section.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 #closeModelDetails {
   margin-top: 1rem;
 }
-
