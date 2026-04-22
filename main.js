@@ -247,6 +247,102 @@ cell.value = cell.value <span class="keyword">^</span> <span class="string">1</s
   <span class="comment">// current и action</span>
   <span class="keyword">return</span> transitions[current][action];
 }`
+  },
+  {
+    title: 'Декомпозиция',
+    definition: 'Процесс разделения сложной системы или задачи на более мелкие, простые и управляемые части (подсистемы), которые легче анализировать и реализовывать.',
+    relation: 'Позволяет справиться со сложностью: решение большой задачи сводится к последовательному решению набора малых задач.',
+    code: `<span class="comment">// Декомпозиция сложной логики на чистые функции</span>
+<span class="keyword">const</span> <span class="function">validate</span> = (data) => !!data.name;
+<span class="keyword">const</span> <span class="function">save</span> = (data) => database.push(data);
+
+<span class="keyword">function</span> <span class="function">processUser</span>(user) {
+  <span class="keyword">if</span> (validate(user)) save(user); <span class="comment">// Составная задача разделена</span>
+}`
+  },
+  {
+    title: 'Формализация',
+    definition: 'Переход от содержательного описания объекта или процесса на естественном языке к строгому описанию с помощью искусственного языка (математики, логики или кода).',
+    relation: 'Устраняет двусмысленность: превращает абстрактную идею в четкий алгоритм, понятный машине.',
+    code: `<span class="comment">// Естественный язык: "Если пользователь взрослый, пусти его"</span>
+<span class="comment">// Формализованный вид (логическое выражение):</span>
+<span class="keyword">const</span> <span class="variable">isAllowed</span> = user.age >= <span class="number">18</span>;`
+  },
+  {
+    title: 'Изоморфное отображение',
+    definition: 'Соответствие между двумя структурами, при котором сохраняются все связи и свойства. Если структуры изоморфны, операции в одной полностью соответствуют операциям в другой.',
+    relation: 'В разработке: код, который может выполняться и на сервере, и на клиенте с сохранением идентичной логики и состояния.',
+    code: `<span class="comment">// Одна и та же функция рендеринга (Isomorphic/Universal JS)</span>
+<span class="keyword">function</span> <span class="function">renderApp</span>(state) {
+  <span class="comment">// Работает в Node.js (SSR) и в браузере</span>
+  <span class="keyword">return</span> <span class="string">\`&lt;div&gt;\${state.title}&lt;/div&gt;\`</span>;
+}`
+  },
+  {
+    title: 'Декларативная парадигма',
+    definition: 'Стиль программирования, при котором описывается *что* программа должна достичь (желаемый результат), а не пошаговое руководство *как* это сделать.',
+    relation: 'Снижает количество побочных эффектов и делает код более читаемым за счет абстрагирования от управления состоянием и циклами.',
+    code: `<span class="comment">// Декларативный подход (SQL или Array methods)</span>
+<span class="keyword">const</span> <span class="variable">activeUsers</span> = users.<span class="function">filter</span>(u => u.isActive);
+
+<span class="comment">// Мы не пишем цикл 'for', мы описываем КРИТЕРИЙ выбора</span>`
+  },
+  {
+    title: 'Антифрод-система',
+    definition: 'Сервис для оценки транзакций или действий на предмет вероятности мошенничества (фрода) в режиме реального времени с использованием правил и ML-моделей.',
+    relation: 'Защищает бизнес от потерь: анализирует паттерны поведения, геолокацию и отпечатки устройств для блокировки подозрительных операций.',
+    code: `<span class="comment">// Упрощенная проверка на подозрительный платеж</span>
+<span class="keyword">const</span> <span class="function">isFraud</span> = (tx) => tx.amount > <span class="number">10000</span> && !tx.isVerifiedDevice;`
+  },
+  {
+    title: 'Аппроксимация',
+    definition: 'Метод замены сложных математических объектов (функций, значений) более простыми и близкими к оригиналу, но удобными для вычислений.',
+    relation: 'Используется, когда точное решение найти невозможно или слишком дорого по ресурсам: мы жертвуем точностью ради скорости.',
+    code: `<span class="comment">// Пример: число π через округление</span>
+<span class="keyword">const</span> <span class="variable">PI_APPROX</span> = <span class="number">3.14</span>; <span class="comment">// Для многих задач этой точности достаточно</span>`
+  },
+  {
+    title: 'Дискретно-детерминированные модели',
+    definition: 'Математические модели, описывающие системы, которые меняются скачкообразно (в конкретные моменты времени) и имеют строго предсказуемое поведение.',
+    relation: 'Основа цифровой логики и компьютерных алгоритмов: состояние системы в момент T+1 полностью определяется состоянием в момент T.',
+    code: `<span class="comment">// Модель конечного автомата (FSM)</span>
+<span class="keyword">const</span> <span class="variable">machine</span> = { state: <span class="string">'IDLE'</span> };
+<span class="function">transition</span>(machine, <span class="string">'START'</span>); <span class="comment">// Всегда перейдет в 'RUNNING'</span>`
+  },
+  {
+    title: 'React.js',
+    definition: 'JavaScript-библиотека для создания пользовательских интерфейсов с использованием компонентного подхода и декларативного управления состоянием.',
+    relation: 'Эффективно обновляет DOM через механизм Virtual DOM, позволяя разработчику описывать UI как функцию от состояния.',
+    code: `<span class="comment">// Функциональный компонент React</span>
+<span class="keyword">const</span> <span class="function">App</span> = () => <span class="keyword">&lt;div&gt;</span>Hello, World!<span class="keyword">&lt;/div&gt;</span>;`
+  },
+  {
+    title: 'Vercel',
+    definition: 'Облачная платформа для деплоя и хостинга фронтенд-приложений (особенно Next.js), ориентированная на высокую производительность и CI/CD.',
+    relation: 'Автоматизирует процесс доставки кода от Git-репозитория до глобальной сети доставки контента (Edge Network).',
+    code: `<span class="comment">// vercel.json — конфигурация деплоя</span>
+{ <span class="string">"version"</span>: <span class="number">2</span>, <span class="string">"framework"</span>: <span class="string">"nextjs"</span> }`
+  },
+  {
+    title: 'JavaScript',
+    definition: 'Мультипарадигменный язык программирования, являющийся основным инструментом для создания интерактивности в веб-браузерах и на сервере (Node.js).',
+    relation: 'Связующее звено между пользователем и логикой приложения, поддерживающее асинхронность и событийную модель.',
+    code: `<span class="comment">// Асинхронная операция в JS</span>
+<span class="keyword">const</span> <span class="variable">data</span> = <span class="keyword">await</span> <span class="function">fetch</span>(<span class="string">'/api/data'</span>).<span class="function">json</span>();`
+  },
+  {
+    title: 'Стандартная ошибка (SE)',
+    definition: 'Статистическая величина, оценивающая изменчивость выборочного среднего. Показывает, насколько далеко выборочное среднее может находиться от истинного среднего популяции.',
+    relation: 'Ключевой показатель точности: чем меньше стандартная ошибка, тем надежнее наши данные.',
+    code: `<span class="comment">// SE = Standard Deviation / sqrt(n)</span>
+<span class="keyword">const</span> <span class="variable">standardError</span> = <span class="function">stdDev</span>(sample) / Math.<span class="function">sqrt</span>(sample.length);`
+  },
+  {
+    title: 'Коэффициент вариации (CV)',
+    definition: 'Относительная мера разброса данных, выраженная в процентах. Рассчитывается как отношение стандартного отклонения к среднему арифметическому.',
+    relation: 'Позволяет сравнивать изменчивость данных с разными единицами измерения или масштабами.',
+    code: `<span class="comment">// CV = (σ / μ) * 100%</span>
+<span class="keyword">const</span> <span class="variable">cv</span> = (<span class="function">stdDev</span>(data) / <span class="function">mean</span>(data)) * <span class="number">100</span>;`
   }
 ];
 
