@@ -1,0 +1,262 @@
+.serviceCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: var(--transition-normal);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.serviceCard:hover {
+  transform: translateY(-6px);
+  border-color: var(--accent-primary);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.serviceVisual {
+  position: relative;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.googleVisual {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.15), rgba(52, 168, 83, 0.15));
+}
+
+.spotifyVisual {
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.15), rgba(30, 215, 96, 0.15));
+}
+
+.kaspiVisual {
+  background: linear-gradient(135deg, rgba(255, 0, 51, 0.15), rgba(255, 77, 77, 0.15));
+}
+
+.serviceIconWrapper {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.serviceIconWrapper svg {
+  width: 24px;
+  height: 24px;
+}
+
+.servicePreview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Matrix Preview */
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 2rem;
+}
+
+.previewCell {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  transition: var(--transition-fast);
+}
+
+.previewCell.on {
+  background: var(--accent-primary);
+  box-shadow: 0 0 15px var(--glow-color);
+}
+
+.previewCell.off {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.serviceCard:hover .previewCell.on {
+  animation: cellPulse 1s ease-in-out infinite;
+}
+
+@keyframes cellPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Rings Preview */
+.previewRings {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.previewRing {
+  position: absolute;
+  border: 3px solid;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ringOuter {
+  width: 110px;
+  height: 110px;
+  border-color: var(--accent-primary);
+  animation: ringRotate 8s linear infinite;
+}
+
+.ringMiddle {
+  width: 75px;
+  height: 75px;
+  border-color: var(--accent-secondary);
+  animation: ringRotate 6s linear infinite reverse;
+}
+
+.ringInner {
+  width: 40px;
+  height: 40px;
+  border-color: var(--accent-success);
+  animation: ringRotate 4s linear infinite;
+}
+
+.previewCenter {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes ringRotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Graph Preview */
+.previewGraph {
+  position: relative;
+  width: 140px;
+  height: 80px;
+}
+
+.graphNodePreview {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.graphNodePreview.n1 { left: 5%; top: 40%; background: var(--accent-success); }
+.graphNodePreview.n2 { left: 35%; top: 10%; }
+.graphNodePreview.n3 { left: 35%; top: 70%; }
+.graphNodePreview.n4 { left: 80%; top: 40%; background: var(--kaspi-red); }
+
+.graphLines {
+  position: absolute;
+  inset: 0;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.serviceContent {
+  padding: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.serviceBadge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin-bottom: 0.5rem;
+  align-self: flex-start;
+}
+
+.serviceName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.serviceDescription {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+  flex: 1;
+}
+
+.serviceTags {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 0.2rem 0.4rem;
+  background: rgba(0, 212, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--accent-primary);
+}
+
+.difficultyPicker {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.difficultyPicker span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.difficultyOption {
+  border: 1px solid var(--border-color);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.difficultyOption:hover,
+.difficultyOption.active {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.12), rgba(124, 58, 237, 0.12));
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.btnCard {
+  margin: 1.25rem 1.25rem 1.25rem;
+  width: calc(100% - 2.5rem);
+}

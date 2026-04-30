@@ -1,0 +1,58 @@
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: rgba(20, 20, 30, 0.8);
+  --bg-glass: rgba(255, 255, 255, 0.05);
+  
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0b0;
+  --text-muted: #606070;
+  
+  --accent-primary: #00d4ff;
+  --accent-secondary: #7c3aed;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  
+  --google-blue: #4285F4;
+  --spotify-green: #1DB954;
+  --kaspi-red: #FF0033;
+  
+  --border-color: rgba(255, 255, 255, 0.1);
+  --glow-color: rgba(0, 212, 255, 0.3);
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 30px var(--glow-color);
+  
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  --font-mono: 'SF Mono', 'Fira Code', monospace;
+
+  /* Responsive breakpoints for synchronized CSS/JS graph scaling */
+  --bp-xs: 320px;
+  --bp-sm: 480px;
+  --bp-md: 640px;
+  --bp-lg: 768px;
+  --bp-xl: 1024px;
+  --bp-2xl: 1200px;
+
+  /* Graph sizing tokens */
+  --graph-container-width: 760px;
+  --graph-container-height: 560px;
+  --graph-padding: 1rem;
+  --graph-node-size: 62px;
+  --graph-node-font-size: 1rem;
+  --graph-edge-label-font: 0.8rem;
+  --graph-info-font-size: 0.9rem;
+  --graph-legend-font-size: 0.75rem;
+  --graph-optimal-font-size: 0.85rem;
+}
