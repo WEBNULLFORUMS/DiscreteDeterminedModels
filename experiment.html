@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QadamAlgo - Данные исследования</title>
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">
+            <div class="logo-shape"></div>
+          </div>
+          <span class="logo-text">QadamAlgo</span>
+        </div>
+
+        <nav class="nav">
+          <a href="index.html" class="nav-link back-link">
+            <span>На главную</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="page active" style="padding-top: 2rem; display: block">
+        <div class="exp-container">
+          <div class="dashboard-header">
+            <h2 class="section-title">Данные исследования</h2>
+            <p class="section-subtitle">
+              Сводная таблица результатов тестирования контрольной и
+              экспериментальной групп
+            </p>
+          </div>
+          <hr />
+          <div class="exp-container">
+            <div class="dashboard-header">
+              <h2 class="section-title">Сводные метрики исследования</h2>
+              <p class="section-subtitle">
+                Сравнение контрольной (Альфа) и экспериментальной (Бета) групп
+              </p>
+            </div>
+
+            <!-- Таблица метрик как на изображении -->
+            <div class="exp-table-wrapper" style="margin-bottom: 4rem">
+              <table class="exp-table">
+                <thead>
+                  <tr>
+                    <th>Параметр (метрика)</th>
+                    <th>Контрольная группа (Альфа)</th>
+                    <th>Экспериментальная группа (Бета)</th>
+                  </tr>
+                </thead>
+                <tbody id="metricsSummaryTable">
+                  <tr>
+                    <td>Средний балл (Пре-тест)</td>
+                    <td id="avgPreAlpha"></td>
+                    <td id="avgPreBeta"></td>
+                  </tr>
+                  <tr>
+                    <td>Средний балл (Пост-тест)</td>
+                    <td id="avgPostAlpha"></td>
+                    <td id="avgPostBeta"></td>
+                  </tr>
+                  <tr>
+                    <td>Итоговый прирост (%)</td>
+                    <td id="growthAlpha"></td>
+                    <td id="growthBeta"></td>
+                  </tr>
+                  <tr>
+                    <td>Медиана (Пост-тест)</td>
+                    <td id="medianAlpha"></td>
+                    <td id="medianBeta"></td>
+                  </tr>
+                  <tr>
+                    <td>Мода (Пост-тест)</td>
+                    <td id="modeAlpha"></td>
+                    <td id="modeBeta"></td>
+                  </tr>
+                  <tr>
+                    <td>Станд. отклонение</td>
+                    <td id="stdAlpha"></td>
+                    <td id="stdBeta"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="dashboard-header">
+              <h2 class="section-title">Данные участников</h2>
+              <p class="section-subtitle">
+                Результаты тестирования (расчет автоматизирован)
+              </p>
+            </div>
+
+            <div class="exp-table-wrapper">
+              <table class="exp-table" id="expDataTable">
+                <thead>
+                  <tr>
+                    <th>№</th>
+                    <th>Группа</th>
+                    <th>Пре-тест</th>
+                    <th>Пост-тест</th>
+                    <th>Абс. Изменение</th>
+                    <th>Относит. Изменение (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Группа Альфа -->
+                  <tr>
+                    <td>1</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>9</td>
+                    <td>9</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>1</td>
+                    <td>2</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>8</td>
+                    <td>8</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>2</td>
+                    <td>4</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>5</td>
+                    <td>4</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>7</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>7</td>
+                    <td>8</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>8</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>1</td>
+                    <td>3</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>9</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>4</td>
+                    <td>6</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>10</td>
+                    <td><span class="exp-badge exp-alpha">Альфа</span></td>
+                    <td>3</td>
+                    <td>6</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <!-- Группа Бета -->
+                  <tr>
+                    <td>1</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>4</td>
+                    <td>9</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>2</td>
+                    <td>8</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>8</td>
+                    <td>7</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>3</td>
+                    <td>9</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>5</td>
+                    <td>10</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>1</td>
+                    <td>8</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>7</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>5</td>
+                    <td>5</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>8</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>4</td>
+                    <td>10</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>9</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>7</td>
+                    <td>10</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>10</td>
+                    <td><span class="exp-badge exp-beta">Бета</span></td>
+                    <td>2</td>
+                    <td>10</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="dashboard-header" style="margin-top: 5rem">
+            <h2 class="section-title">Работы участников</h2>
+            <p class="section-subtitle">
+              Документация и подтверждение результатов тестирования
+            </p>
+          </div>
+
+          <div class="exp-grid">
+            <div class="exp-column">
+              <h3>
+                <span class="exp-badge exp-alpha">Группа Альфа</span>
+                Контрольная (10)
+              </h3>
+
+              <div
+                class="exp-card"
+                data-name="Участник №1"
+                data-group="Контрольная (Альфа)"
+                data-pre="9"
+                data-post="9"
+                data-abs="0"
+                data-rel="0.0%"
+                data-pdf="2.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №1</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="2.pdf"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №2"
+                data-group="Контрольная (Альфа)"
+                data-pre="1"
+                data-post="2"
+                data-abs="+1"
+                data-rel="1.0%"
+                data-pdf="pdf/alpha-2.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №2</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-2.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №3"
+                data-group="Контрольная (Альфа)"
+                data-pre="8"
+                data-post="8"
+                data-abs="0"
+                data-rel="0.0%"
+                data-pdf="pdf/alpha-3.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №3</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-3.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №4"
+                data-group="Контрольная (Альфа)"
+                data-pre="2"
+                data-post="4"
+                data-abs="+2"
+                data-rel="1.0%"
+                data-pdf="pdf/alpha-4.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №4</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-4.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №5"
+                data-group="Контрольная (Альфа)"
+                data-pre="5"
+                data-post="4"
+                data-abs="-1"
+                data-rel="-0.2%"
+                data-pdf="pdf/alpha-5.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №5</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-5.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №6"
+                data-group="Контрольная (Альфа)"
+                data-pre="6"
+                data-post="6"
+                data-abs="0"
+                data-rel="0.0%"
+                data-pdf="pdf/alpha-6.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №6</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-6.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №7"
+                data-group="Контрольная (Альфа)"
+                data-pre="3"
+                data-post="4"
+                data-abs="+1"
+                data-rel="0.33%"
+                data-pdf="pdf/alpha-7.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №7</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-7.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №8"
+                data-group="Контрольная (Альфа)"
+                data-pre="7"
+                data-post="7"
+                data-abs="0"
+                data-rel="0.0%"
+                data-pdf="pdf/alpha-8.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №8</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-8.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №9"
+                data-group="Контрольная (Альфа)"
+                data-pre="4"
+                data-post="5"
+                data-abs="+1"
+                data-rel="0.25%"
+                data-pdf="pdf/alpha-9.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №9</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-9.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №10"
+                data-group="Контрольная (Альфа)"
+                data-pre="8"
+                data-post="9"
+                data-abs="+1"
+                data-rel="0.12%"
+                data-pdf="pdf/alpha-10.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №10</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/alpha-10.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+
+            <div class="exp-column">
+              <h3>
+                <span class="exp-badge exp-beta">Группа Бета</span>
+                Экспериментальная (10)
+              </h3>
+
+              <div
+                class="exp-card"
+                data-name="Участник №1"
+                data-group="Экспериментальная (Бета)"
+                data-pre="4"
+                data-post="9"
+                data-abs="+5"
+                data-rel="1.25%"
+                data-pdf="pdf/beta-11.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №1</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-11.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №2"
+                data-group="Экспериментальная (Бета)"
+                data-pre="2"
+                data-post="8"
+                data-abs="+6"
+                data-rel="3.0%"
+                data-pdf="pdf/beta-12.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №2</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-12.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №3"
+                data-group="Экспериментальная (Бета)"
+                data-pre="3"
+                data-post="10"
+                data-abs="+7"
+                data-rel="2.33%"
+                data-pdf="pdf/beta-13.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №3</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-13.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №4"
+                data-group="Экспериментальная (Бета)"
+                data-pre="5"
+                data-post="9"
+                data-abs="+4"
+                data-rel="0.8%"
+                data-pdf="pdf/beta-14.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №4</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-14.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №5"
+                data-group="Экспериментальная (Бета)"
+                data-pre="1"
+                data-post="8"
+                data-abs="+7"
+                data-rel="7.0%"
+                data-pdf="pdf/beta-15.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №5</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-15.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №6"
+                data-group="Экспериментальная (Бета)"
+                data-pre="4"
+                data-post="10"
+                data-abs="+6"
+                data-rel="1.5%"
+                data-pdf="pdf/beta-16.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №6</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-16.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №7"
+                data-group="Экспериментальная (Бета)"
+                data-pre="6"
+                data-post="10"
+                data-abs="+4"
+                data-rel="0.67%"
+                data-pdf="pdf/beta-17.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №7</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-17.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №8"
+                data-group="Экспериментальная (Бета)"
+                data-pre="2"
+                data-post="9"
+                data-abs="+7"
+                data-rel="3.5%"
+                data-pdf="pdf/beta-18.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №8</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-18.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №9"
+                data-group="Экспериментальная (Бета)"
+                data-pre="3"
+                data-post="8"
+                data-abs="+5"
+                data-rel="1.67%"
+                data-pdf="pdf/beta-19.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №9</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-19.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+              <div
+                class="exp-card"
+                data-name="Участник №10"
+                data-group="Экспериментальная (Бета)"
+                data-pre="4"
+                data-post="9"
+                data-abs="+5"
+                data-rel="1.25%"
+                data-pdf="pdf/beta-20.pdf"
+              >
+                <div class="exp-card-header">
+                  <span class="exp-name">Участник №10</span>
+                  <div class="exp-view-btn">
+                    <svg class="view-icon-svg" viewBox="0 0 24 24">
+                      <path
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    <span>Смотреть</span>
+                  </div>
+                </div>
+                <div class="exp-pdf-frame">
+                  <iframe
+                    src="pdf/beta-20.pdf#toolbar=0&navpanes=0&scrollbar=0"
+                    width="100%"
+                    height="100%"
+                    tabindex="-1"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="help-modal-overlay" id="studentModalOverlay">
+      <div
+        class="help-modal completion-modal"
+        style="max-width: 800px; width: 90%"
+      >
+        <div class="help-modal-header">
+          <h2 id="studentModalTitle">Данные участника</h2>
+          <button class="help-modal-close" id="studentModalClose">×</button>
+        </div>
+        <div class="help-modal-content">
+          <div class="completion-highlight" id="studentGroupHighlight"></div>
+          <div class="completion-metrics">
+            <div class="completion-metric">
+              <span class="label">Пре-тест</span
+              ><span class="value" id="studentPre"></span>
+            </div>
+            <div class="completion-metric">
+              <span class="label">Пост-тест</span
+              ><span class="value" id="studentPost"></span>
+            </div>
+            <div class="completion-metric">
+              <span class="label">Абсолютное изм.</span
+              ><span class="value" id="studentAbs"></span>
+            </div>
+            <div class="completion-metric">
+              <span class="label">Относительное изм.</span
+              ><span class="value" id="studentRel"></span>
+            </div>
+          </div>
+          <div class="service-block">
+            <h3>Оригинал работы</h3>
+            <div
+              style="
+                height: 500px;
+                margin-top: 1rem;
+                border-radius: var(--radius-sm);
+                overflow: hidden;
+                background: var(--bg-secondary);
+              "
+            >
+              <iframe
+                id="studentPdfViewer"
+                src=""
+                width="100%"
+                height="100%"
+                style="border: none"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3 class="footer-title">QadamAlgo</h3>
+          <p class="footer-description">
+            Интерактивное обучение алгоритмам через визуализацию и головоломки
+          </p>
+          <p class="footer-credit">
+            Разработчик: <strong>Потапченко Максим</strong> *
+            <strong>Проект 2026</strong>
+          </p>
+        </div>
+        <div class="footer-section">
+          <h4 class="footer-subtitle">Ссылки</h4>
+          <ul class="footer-links">
+            <li>
+              <a
+                href="https://docs.google.com/spreadsheets/d/15A1aaGxiX914gI4VUL4Vl91oawIyAK3R/edit?usp=sharing&ouid=106237094692183415625&rtpof=true&sd=true"
+                target="_blank"
+                >Данные исследования</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://docs.google.com/document/d/1-gWzN_0dKI3m0jluAXsj1Mi0TUWudZ-P/edit?usp=drive_web&ouid=106237094692183415625&rtpof=true"
+                target="_blank"
+                >Вопросы исследования</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/WEBNULLFORUMS/DiscreteDeterminedModels"
+                target="_blank"
+                >GitHub</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 QadamAlgo. Все права защищены.</p>
+      </div>
+    </footer>
+
+    <div style="display: none" aria-hidden="true">
+      <button id="startSession"></button><button id="backToDashboard"></button
+      ><button id="backButtonMobile"></button> <button id="undoMove"></button
+      ><button id="resetCanvas"></button><button id="solveHint"></button>
+      <button id="helpButton"></button>
+      <div id="mainCanvas"></div>
+      <div id="canvasTitle"></div>
+      <div id="goalPanel"></div>
+      <div id="goalContent"></div>
+      <button id="completeTask"></button>
+      <div id="entropyValue"></div>
+      <div id="entropyBar"></div>
+      <div id="sessionTime"></div>
+      <div id="movesCount"></div>
+      <canvas id="difficultyChart"></canvas>
+      <div id="termsGrid"></div>
+      <input id="glossarySearch" />
+      <div id="totalTime"></div>
+      <div id="avgAccuracy"></div>
+      <div id="efficiency"></div>
+      <div id="logic"></div>
+      <div id="researchText"></div>
+      <canvas id="radarChart"></canvas>
+      <div id="matrixStars"></div>
+      <div id="matrixAttempts"></div>
+      <div id="ringsStars"></div>
+      <div id="ringsAttempts"></div>
+      <div id="graphStars"></div>
+      <div id="graphAttempts"></div>
+      <button id="closeModelDetails"></button><button id="exportPDF"></button>
+      <button id="helpModalClose"></button><button id="helpModalOK"></button>
+      <div id="helpModalOverlay"></div>
+      <button id="completionModalClose"></button
+      ><button id="completionModalOK"></button>
+      <div id="completionModalOverlay"></div>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>
