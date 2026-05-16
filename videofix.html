@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QadamAlgo - Видеофиксация для дневника исследований</title>
+    <link rel="stylesheet" href="main.css" />
+    <style>
+      .video-page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 5rem;
+      }
+
+      .video-header-block {
+        margin-bottom: 2rem;
+      }
+
+      .video-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 2rem;
+      }
+
+      @media (max-width: 992px) {
+        .video-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .custom-player-wrapper {
+        position: relative;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        transition: border-color var(--transition-normal);
+      }
+
+      .custom-player-wrapper:hover {
+        border-color: rgba(0, 212, 255, 0.4);
+      }
+
+      .video-element-container {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%; 
+        background: #000;
+      }
+
+      .video-element-container video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .player-controls {
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(to top, rgba(10, 10, 15, 0.95), rgba(18, 18, 26, 0.8));
+        padding: 1rem;
+        gap: 0.75rem;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .progress-area {
+        position: relative;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        cursor: pointer;
+        transition: height 0.1s ease;
+      }
+
+      .progress-area:hover {
+        height: 8px;
+      }
+
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+        border-radius: 3px;
+        position: relative;
+      }
+
+      .progress-bar::after {
+        content: '';
+        position: absolute;
+        right: -4px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 12px;
+        background: var(--text-primary);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--accent-primary);
+        opacity: 0;
+        transition: opacity 0.1s ease;
+      }
+
+      .progress-area:hover .progress-bar::after {
+        opacity: 1;
+      }
+
+      .control-buttons-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .controls-left, .controls-right {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+      }
+
+      .player-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color var(--transition-fast), transform var(--transition-fast);
+        padding: 0.25rem;
+      }
+
+      .player-btn:hover {
+        color: var(--text-primary);
+        transform: scale(1.05);
+      }
+
+      .player-btn svg {
+        width: 22px;
+        height: 22px;
+        fill: currentColor;
+      }
+
+      .time-display {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        user-select: none;
+      }
+
+      .volume-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .volume-slider {
+        width: 70px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(255, 255, 255, 0.1);
+        height: 4px;
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+
+      .volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+      }
+
+      .video-actions-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+        padding: 1.2rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+      }
+
+      .youtube-redirect-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        background: #ff0000;
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: var(--radius-sm);
+        box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      }
+
+      .youtube-redirect-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+        color: #ffffff;
+      }
+
+      .video-sidebar-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .timecodes-card, .video-stats-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        padding: 1.5rem;
+      }
+
+      .panel-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.5rem;
+      }
+
+      .timecode-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        list-style: none;
+      }
+
+      .timecode-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 0.75rem;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: background var(--transition-fast);
+        border: 1px solid transparent;
+      }
+
+      .timecode-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(0, 212, 255, 0.1);
+      }
+
+      .timecode-item.active {
+        background: rgba(0, 212, 255, 0.08);
+        border-color: rgba(0, 212, 255, 0.3);
+      }
+
+      .timecode-stamp {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        color: var(--accent-primary);
+        background: rgba(0, 212, 255, 0.1);
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+      }
+
+      .timecode-text {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        flex: 1;
+        margin-left: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .stat-mini-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+      }
+      .stat-mini-label { color: var(--text-secondary); }
+      .stat-mini-value { font-family: var(--font-mono); color: var(--accent-success); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">
+            <div class="logo-shape"></div>
+          </div>
+          <span class="logo-text">QadamAlgo</span>
+        </div>
+        <nav class="nav">
+          <a href="index.html" class="nav-link back-link">
+            <span>На главную</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="video-page-container">
+        
+        <div class="video-header-block">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            <span>Медиатека</span>
+          </div>
+          <h1 class="services-title" style="text-align: left; margin-bottom: 0.5rem;">
+            Видеофиксация для <span class="gradient-text">дневника исследований</span>
+          </h1>
+          <p class="services-subtitle" style="text-align: left; margin-left: 0;">
+            Подтверждение полного самостоятельного выполнения проектной работы.
+          </p>
+        </div>
+
+        <div class="video-layout">
+          
+          <div class="video-main-column">
+            
+            <div class="custom-player-wrapper" id="playerWrapper">
+              <div class="video-element-container">
+                <video id="mainVideo" preload="metadata">
+                  <source src="https://huggingface.co/buckets/noeradev/qadammedia/resolve/video_dairy.mov?download=true" type="video/mp4" />
+                  Ваш браузер не поддерживает HTML5 видео.
+                </video>
+              </div>
+
+              <div class="player-controls">
+                
+                <div class="progress-area" id="progressArea">
+                  <div class="progress-bar" id="progressBar"></div>
+                </div>
+
+                <div class="control-buttons-row">
+                  <div class="controls-left">
+                    <button class="player-btn" id="playPauseBtn" title="Воспроизвести (Пробел)">
+                      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+
+                    <button class="player-btn" id="rewindBtn" title="Назад на 10 секунд">
+                      <svg viewBox="0 0 24 24"><path d="M12.5 3C7.8 3 4 6.8 4 11.5S7.8 20 12.5 20s8.5-3.8 8.5-8.5S17.2 3 12.5 3zm0 15c-3.6 0-6.5-2.9-6.5-6.5S8.9 5 12.5 5s6.5 2.9 6.5 6.5-2.9 6.5-6.5 6.5z"/><path d="M10 9l-4 3 4 3V9zm4 0l-4 3 4 3V9z"/></svg>
+                    </button>
+
+                    <button class="player-btn" id="forwardBtn" title="Вперед на 10 секунд">
+                      <svg viewBox="0 0 24 24"><path d="M11.5 3C6.8 3 3 6.8 3 11.5S6.8 20 11.5 20s8.5-3.8 8.5-8.5S16.2 3 11.5 3zm0 15c-3.6 0-6.5-2.9-6.5-6.5S7.9 5 11.5 5s6.5 2.9 6.5 6.5-2.9 6.5-6.5 6.5z"/><path d="M14 9l4 3-4 3V9zm-4 0l4 3-4 3V9z"/></svg>
+                    </button>
+
+                    <div class="volume-container">
+                      <button class="player-btn" id="muteBtn" title="Включить/выключить звук">
+                        <svg id="volumeHighIcon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                        <svg id="volumeMuteIcon" viewBox="0 0 24 24" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                      </button>
+                      <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="0.7" />
+                    </div>
+
+                    <div class="time-display">
+                      <span id="currentTime">0:00</span> / <span id="durationTime">1:05</span>
+                    </div>
+                  </div>
+
+                  <div class="controls-right">
+                    <button class="player-btn" id="fullscreenBtn" title="Полноэкранный режим (f)">
+                      <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></style>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="video-actions-bar">
+              <div>
+                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Оригинальный материал</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary);">Если плеер работает нестабильно или вы хотите оставить комментарий.</p>
+              </div>
+              <a href="https://www.youtube.com/watch?v=o208D0bna_8" target="_blank" class="youtube-redirect-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                Посмотреть на YouTube
+              </a>
+            </div>
+
+          </div>
+
+          <div class="video-sidebar-panel">
+            
+            <div class="timecodes-card">
+              <h2 class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                Содержание видео
+              </h2>
+              <ul class="timecode-list" id="timecodeList">
+                <li class="timecode-item active" data-time="0">
+                  <span class="timecode-stamp">00:01</span>
+                  <span class="timecode-text">Что это за видео?</span>
+                </li>
+                <li class="timecode-item" data-time="11">
+                  <span class="timecode-stamp">00:11</span>
+                  <span class="timecode-text">Первая фаза проекта: Разработка программного комплекса</span>
+                </li>
+                <li class="timecode-item" data-time="22">
+                  <span class="timecode-stamp">00:22</span>
+                  <span class="timecode-text">Архитектура программного комплекса</span>
+                </li>
+                <li class="timecode-item" data-time="39">
+                  <span class="timecode-stamp">00:39</span>
+                  <span class="timecode-text">Вторая фаза проекта: Проведение экспериментального исследования</span>
+                </li>
+                <li class="timecode-item" data-time="50">
+                  <span class="timecode-stamp">00:50</span>
+                  <span class="timecode-text">Финальная фаза проекта: Написание исследовательской работы</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="video-stats-card">
+              <h2 class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-success)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Метрики сессии
+              </h2>
+              <div class="stat-mini-row">
+                <span class="stat-mini-label">Прогресс просмотра:</span>
+                <span class="stat-mini-value" id="statWatchProgress">0%</span>
+              </div>
+              <div class="stat-mini-row">
+                <span class="stat-mini-label">Скорость потока:</span>
+                <span class="stat-mini-value">1.0x (Норма)</span>
+              </div>
+              <div class="stat-mini-row">
+                <span class="stat-mini-label">Статус кодека:</span>
+                <span class="stat-mini-value" style="color: var(--accent-primary)">Оптимальный</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3 class="footer-title">QadamAlgo</h3>
+          <p class="footer-description">
+            Интерактивное обучение алгоритмам через визуализацию и головоломки
+          </p>
+          <p class="footer-credit">
+            Разработчик: <strong>Потапченко Максим</strong> *
+            <strong>Проект 2026</strong>
+          </p>
+        </div>
+        <div class="footer-section">
+          <h4 class="footer-subtitle">Ссылки</h4>
+          <ul class="footer-links">
+            <li>
+              <a
+                href="https://docs.google.com/spreadsheets/d/15A1aaGxiX914gI4VUL4Vl91oawIyAK3R/edit?usp=sharing&ouid=106237094692183415625&rtpof=true&sd=true"
+                target="_blank"
+                >Данные исследования</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://docs.google.com/document/d/1-gWzN_0dKI3m0jluAXsj1Mi0TUWudZ-P/edit?usp=drive_web&ouid=106237094692183415625&rtpof=true"
+                target="_blank"
+                >Вопросы исследования</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/WEBNULLFORUMS/DiscreteDeterminedModels"
+                target="_blank"
+                >GitHub</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 QadamAlgo. Все права защищены.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const video = document.getElementById("mainVideo");
+        const playerWrapper = document.getElementById("playerWrapper");
+        const playPauseBtn = document.getElementById("playPauseBtn");
+        const playIcon = document.getElementById("playIcon");
+        const pauseIcon = document.getElementById("pauseIcon");
+        const progressArea = document.getElementById("progressArea");
+        const progressBar = document.getElementById("progressBar");
+        const currentTimeEl = document.getElementById("currentTime");
+        const durationTimeEl = document.getElementById("durationTime");
+        const muteBtn = document.getElementById("muteBtn");
+        const volumeHighIcon = document.getElementById("volumeHighIcon");
+        const volumeMuteIcon = document.getElementById("volumeMuteIcon");
+        const volumeSlider = document.getElementById("volumeSlider");
+        const fullscreenBtn = document.getElementById("fullscreenBtn");
+        const rewindBtn = document.getElementById("rewindBtn");
+        const forwardBtn = document.getElementById("forwardBtn");
+        const timecodeItems = document.querySelectorAll(".timecode-item");
+        const statWatchProgress = document.getElementById("statWatchProgress");
+
+        // Форматирование времени (SS -> MM:SS)
+        function formatTime(time) {
+          let minutes = Math.floor(time / 60);
+          let seconds = Math.floor(time % 60);
+          seconds = seconds < 10 ? "0" + seconds : seconds;
+          return `${minutes}:${seconds}`;
+        }
+
+        // Play / Pause
+        function togglePlay() {
+          if (video.paused) {
+            video.play();
+            playIcon.style.display = "none";
+            pauseIcon.style.display = "block";
+          } else {
+            video.pause();
+            playIcon.style.display = "block";
+            pauseIcon.style.display = "none";
+          }
+        }
+
+        playPauseBtn.addEventListener("click", togglePlay);
+        video.addEventListener("click", togglePlay);
+
+        // Обновление прогресс-бара и таймеров
+        video.addEventListener("timeupdate", (e) => {
+          const current = e.target.currentTime;
+          const duration = e.target.duration;
+          
+          if(duration) {
+            const progressPercent = (current / duration) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+            currentTimeEl.textContent = formatTime(current);
+            
+            // Динамическое обновление фишки статистики
+            statWatchProgress.textContent = `${Math.round(progressPercent)}%`;
+
+            // Подсветка активного таймкода по ходу воспроизведения
+            updateActiveTimecode(current);
+          }
+        });
+
+        // Длительность видео при загрузке метаданных
+        video.addEventListener("loadedmetadata", (e) => {
+          durationTimeEl.textContent = formatTime(e.target.duration);
+        });
+
+        // Перемотка кликом по прогресс-бару
+        progressArea.addEventListener("click", (e) => {
+          const coordX = e.offsetX;
+          const totalWidth = progressArea.clientWidth;
+          const videoDuration = video.duration;
+          if(videoDuration) {
+            video.currentTime = (coordX / totalWidth) * videoDuration;
+          }
+        });
+
+        // Горячие клавиши (Пробел - пауза, F - фуллскрин)
+        window.addEventListener("keydown", (e) => {
+          if (e.code === "Space" && document.activeElement !== volumeSlider) {
+            e.preventDefault();
+            togglePlay();
+          }
+          if (e.code === "KeyF") {
+            e.preventDefault();
+            toggleFullscreen();
+          }
+        });
+
+        // Перемотка кнопками на 10 секунд
+        rewindBtn.addEventListener("click", () => video.currentTime -= 10);
+        forwardBtn.addEventListener("click", () => video.currentTime += 10);
+
+        // Управление звуком
+        volumeSlider.addEventListener("input", (e) => {
+          video.volume = e.target.value;
+          video.muted = e.target.value === "0";
+          updateVolumeIcons();
+        });
+
+        muteBtn.addEventListener("click", () => {
+          video.muted = !video.muted;
+          if (video.muted) {
+            volumeSlider.value = 0;
+          } else {
+            volumeSlider.value = video.volume || 0.7;
+          }
+          updateVolumeIcons();
+        });
+
+        function updateVolumeIcons() {
+          if (video.muted || video.volume === 0) {
+            volumeHighIcon.style.display = "none";
+            volumeMuteIcon.style.display = "block";
+          } else {
+            volumeHighIcon.style.display = "block";
+            volumeMuteIcon.style.display = "none";
+          }
+        }
+
+        // Полноэкранный режим
+        function toggleFullscreen() {
+          if (!document.fullscreenElement) {
+            playerWrapper.requestFullscreen().catch(err => {
+              console.log(`Ошибка фуллскрина: ${err.message}`);
+            });
+          } else {
+            document.exitFullscreen();
+          }
+        }
+        fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+        // Интерактивная фишка: Переход по таймкодам
+        timecodeItems.forEach(item => {
+          item.addEventListener("click", () => {
+            const targetTime = parseInt(item.getAttribute("data-time"), 10);
+            video.currentTime = targetTime;
+            if (video.paused) video.play();
+            playIcon.style.display = "none";
+            pauseIcon.style.display = "block";
+          });
+        });
+
+        function updateActiveTimecode(currentTime) {
+          let currentActive = timecodeItems[0];
+          timecodeItems.forEach(item => {
+            const itemTime = parseInt(item.getAttribute("data-time"), 10);
+            if (currentTime >= itemTime) {
+              currentActive = item;
+            }
+          });
+          
+          timecodeItems.forEach(item => item.classList.remove("active"));
+          if(currentActive) currentActive.classList.add("active");
+        }
+
+        // Логика бургер-меню хедера (поддержка адаптивности)
+        const hamburgerBtn = document.getElementById("hamburgerBtn");
+        const mobileMenu = document.getElementById("mobileMenu");
+        if (hamburgerBtn && mobileMenu) {
+          hamburgerBtn.addEventListener("click", () => {
+            hamburgerBtn.classList.toggle("active");
+            mobileMenu.classList.toggle("active");
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
