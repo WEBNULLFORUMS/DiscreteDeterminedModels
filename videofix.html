@@ -5,37 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QadamAlgo - Видеофиксация для дневника исследований</title>
     <link rel="stylesheet" href="main.css" />
-    <style>
+<style>
+      /* Оптимизированные адаптивные стили для страницы видеоплеера */
       .video-page-container {
         max-width: 1200px;
         margin: 0 auto;
-        padding: 2rem 1.5rem 5rem;
+        padding: 1rem 1rem 2rem;
       }
 
-      .video-header-block {
-        margin-bottom: 2rem;
-      }
-
-      .video-layout {
-        display: grid;
-        grid-template-columns: 1fr 340px;
-        gap: 2rem;
-      }
-
-      @media (max-width: 992px) {
-        .video-layout {
-          grid-template-columns: 1fr;
+      @media (min-width: 768px) {
+        .video-page-container {
+          padding: 2rem 1.5rem 3rem;
         }
       }
 
+      .video-header-block {
+        margin-bottom: 1.5rem;
+      }
+
+      /* Сетка макета: Mobile First с плавной адаптивностью */
+      .video-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      @media (min-width: 992px) {
+        .video-layout {
+          grid-template-columns: 1fr 340px;
+          gap: 2rem;
+        }
+      }
+
+      /* Стиль контейнера плеера */
       .custom-player-wrapper {
         position: relative;
         background: var(--bg-card);
         border: 1px solid var(--border-color);
-        border-radius: var(--radius-xl);
+        border-radius: var(--radius-lg);
         overflow: hidden;
         box-shadow: var(--shadow-lg);
         transition: border-color var(--transition-normal);
+        width: 100%;
+        user-select: none;
+        -webkit-user-select: none;
       }
 
       .custom-player-wrapper:hover {
@@ -45,8 +58,9 @@
       .video-element-container {
         position: relative;
         width: 100%;
-        padding-top: 56.25%; 
+        padding-top: 56.25%; /* Пропорции 16:9 */
         background: #000;
+        cursor: pointer;
       }
 
       .video-element-container video {
@@ -58,22 +72,114 @@
         object-fit: contain;
       }
 
+      /* Стили для интерактивных зон двойного тапа и кастомного мобильного оверлея */
+      .mobile-overlay-play-state {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.8);
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 25;
+      }
+
+      .mobile-overlay-play-state svg {
+        width: 30px;
+        height: 30px;
+        fill: #fff;
+      }
+
+      .mobile-overlay-play-state.animate-state {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+
+      /* Зоны двойного тапа */
+      .double-tap-zone {
+        position: absolute;
+        top: 0;
+        width: 35%;
+        height: 85%;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+      }
+      .double-tap-zone-left { left: 0; }
+      .double-tap-zone-right { right: 0; }
+
+      .double-tap-ripple {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: scale(0.5);
+        pointer-events: none;
+        transition: all 0.25s ease;
+        color: #fff;
+        font-size: 10px;
+        font-weight: bold;
+      }
+      .double-tap-ripple svg {
+        width: 20px;
+        height: 20px;
+        fill: #fff;
+        margin-bottom: 2px;
+      }
+
+      /* Адаптивная панель управления плеера — теперь скрываемая на мобильных и ПК */
       .player-controls {
         display: flex;
         flex-direction: column;
-        background: linear-gradient(to top, rgba(10, 10, 15, 0.95), rgba(18, 18, 26, 0.8));
-        padding: 1rem;
-        gap: 0.75rem;
+        background: linear-gradient(to top, rgba(10, 10, 15, 0.98), rgba(18, 18, 26, 0.9));
+        padding: 0.5rem 0.75rem;
+        gap: 0.4rem;
         border-top: 1px solid var(--border-color);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
       }
 
+      /* Логика скрытия интерфейса */
+      .custom-player-wrapper.controls-hidden .player-controls {
+        transform: translateY(100%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      @media (min-width: 640px) {
+        .player-controls {
+          padding: 1rem;
+          gap: 0.75rem;
+        }
+      }
+
+      /* Полоса прогресса */
       .progress-area {
         position: relative;
-        height: 6px;
+        height: 5px;
         background: rgba(255, 255, 255, 0.1);
         border-radius: 3px;
         cursor: pointer;
         transition: height 0.1s ease;
+        width: 100%;
       }
 
       .progress-area:hover {
@@ -94,8 +200,8 @@
         right: -4px;
         top: 50%;
         transform: translateY(-50%);
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
         background: var(--text-primary);
         border-radius: 50%;
         box-shadow: 0 0 10px var(--accent-primary);
@@ -107,18 +213,52 @@
         opacity: 1;
       }
 
+      /* Строка управления: стабильный флекс-ряд на всех разрешениях */
       .control-buttons-row {
         display: flex;
+        flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 1rem;
+        gap: 0.5rem;
       }
 
-      .controls-left, .controls-right {
+      @media (min-width: 640px) {
+        .control-buttons-row {
+          gap: 1rem;
+        }
+      }
+
+      .controls-left {
         display: flex;
         align-items: center;
-        gap: 1.25rem;
+        justify-content: flex-start;
+        flex: 1;
+        gap: 0.4rem;
+      }
+
+      @media (min-width: 640px) {
+        .controls-left {
+          gap: 1.25rem;
+        }
+      }
+
+      .controls-right {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+      }
+
+      .controls-left-inner {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      @media (min-width: 640px) {
+        .controls-left-inner {
+          gap: 1.25rem;
+        }
       }
 
       .player-btn {
@@ -130,35 +270,64 @@
         align-items: center;
         justify-content: center;
         transition: color var(--transition-fast), transform var(--transition-fast);
-        padding: 0.25rem;
+        padding: 0.4rem;
+        border-radius: var(--radius-sm);
+        flex-shrink: 0;
       }
 
       .player-btn:hover {
         color: var(--text-primary);
-        transform: scale(1.05);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .player-btn:active {
+        transform: scale(0.95);
       }
 
       .player-btn svg {
-        width: 22px;
-        height: 22px;
+        width: 18px;
+        height: 18px;
         fill: currentColor;
+      }
+
+      @media (min-width: 640px) {
+        .player-btn svg {
+          width: 22px;
+          height: 22px;
+        }
       }
 
       .time-display {
         font-family: var(--font-mono);
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         color: var(--text-secondary);
         user-select: none;
+        white-space: nowrap;
+        margin-left: 0.25rem;
       }
 
+      @media (min-width: 640px) {
+        .time-display {
+          font-size: 0.8rem;
+          margin-left: 0;
+        }
+      }
+
+      /* Регулятор громкости */
       .volume-container {
-        display: flex;
+        display: none;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
+      }
+
+      @media (min-width: 480px) {
+        .volume-container {
+          display: flex;
+        }
       }
 
       .volume-slider {
-        width: 70px;
+        width: 50px;
         -webkit-appearance: none;
         appearance: none;
         background: rgba(255, 255, 255, 0.1);
@@ -168,6 +337,12 @@
         cursor: pointer;
       }
 
+      @media (min-width: 640px) {
+        .volume-slider {
+          width: 80px;
+        }
+      }
+
       .volume-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
@@ -175,57 +350,96 @@
         height: 10px;
         border-radius: 50%;
         background: var(--accent-primary);
+        box-shadow: 0 0 5px var(--accent-primary);
       }
 
+      /* Полноэкранный режим: безопасный паддинг */
+      .custom-player-wrapper:fullscreen .player-controls {
+        padding: 1.5rem;
+      }
+
+      /* Полноэкранный фикс высоты видео */
+      .custom-player-wrapper:fullscreen .video-element-container {
+        padding-top: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      /* Панель действий под видео */
       .video-actions-bar {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 1.5rem;
-        padding: 1.2rem;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding: 1rem;
         background: var(--bg-card);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
       }
 
+      @media (min-width: 576px) {
+        .video-actions-bar {
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1.2rem;
+        }
+      }
+
       .youtube-redirect-btn {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.75rem;
-        padding: 0.75rem 1.5rem;
+        padding: 0.75rem 1.25rem;
         background: #ff0000;
-        color: #ffffff;
+        color: #ffffff !important;
         text-decoration: none;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         border-radius: var(--radius-sm);
-        box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2);
         transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      @media (min-width: 576px) {
+        .youtube-redirect-btn {
+          width: auto;
+        }
       }
 
       .youtube-redirect-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
-        color: #ffffff;
+        box-shadow: 0 6px 16px rgba(255, 0, 0, 0.35);
       }
 
+      /* Боковая панель */
       .video-sidebar-panel {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      @media (min-width: 768px) and (max-width: 991px) {
+        .video-sidebar-panel {
+          grid-template-columns: 1fr 1fr;
+        }
       }
 
       .timecodes-card, .video-stats-card {
         background: var(--bg-card);
         border: 1px solid var(--border-color);
-        border-radius: var(--radius-xl);
-        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        padding: 1.25rem;
+        height: fit-content;
       }
 
       .panel-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 600;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -237,15 +451,25 @@
       .timecode-list {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.4rem;
         list-style: none;
+        max-height: 280px;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+      }
+
+      .timecode-list::-webkit-scrollbar {
+        width: 4px;
+      }
+      .timecode-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
       }
 
       .timecode-item {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.6rem 0.75rem;
+        align-items: flex-start;
+        padding: 0.5rem;
         border-radius: var(--radius-sm);
         cursor: pointer;
         transition: background var(--transition-fast);
@@ -259,34 +483,37 @@
 
       .timecode-item.active {
         background: rgba(0, 212, 255, 0.08);
-        border-color: rgba(0, 212, 255, 0.3);
+        border-color: rgba(0, 212, 255, 0.25);
       }
 
       .timecode-stamp {
         font-family: var(--font-mono);
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: var(--accent-primary);
         background: rgba(0, 212, 255, 0.1);
-        padding: 0.1rem 0.4rem;
+        padding: 0.1rem 0.35rem;
         border-radius: 4px;
+        white-space: nowrap;
+        margin-top: 1px;
       }
 
       .timecode-text {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: var(--text-secondary);
-        flex: 1;
-        margin-left: 0.75rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        margin-left: 0.5rem;
+        white-space: normal;
+        word-break: break-word;
       }
 
       .stat-mini-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 0.9rem;
-        margin-bottom: 0.75rem;
+        font-size: 0.85rem;
+        margin-bottom: 0.6rem;
+      }
+      .stat-mini-row:last-child {
+        margin-bottom: 0;
       }
       .stat-mini-label { color: var(--text-secondary); }
       .stat-mini-value { font-family: var(--font-mono); color: var(--accent-success); font-weight: 600; }
@@ -453,7 +680,7 @@
       </div>
     </main>
 
-    <footer class="footer">
+     <footer class="footer">
       <div class="footer-content">
         <div class="footer-section">
           <h3 class="footer-title">QadamAlgo</h3>
@@ -472,14 +699,14 @@
               <a
                 href="https://docs.google.com/spreadsheets/d/15A1aaGxiX914gI4VUL4Vl91oawIyAK3R/edit?usp=sharing&ouid=106237094692183415625&rtpof=true&sd=true"
                 target="_blank"
-                >Данные исследования</a
+                >Данные исследования Google Drive</a
               >
             </li>
             <li>
               <a
                 href="https://docs.google.com/document/d/1-gWzN_0dKI3m0jluAXsj1Mi0TUWudZ-P/edit?usp=drive_web&ouid=106237094692183415625&rtpof=true"
                 target="_blank"
-                >Вопросы исследования</a
+                >Вопросы исследования Google Drive</a
               >
             </li>
             <li>
@@ -489,8 +716,25 @@
                 >GitHub</a
               >
             </li>
-          </ul>
         </div>
+      </ul>
+          <div class="footer-section">
+          <h4 class="footer-subtitle">Навигация по сайту</h4>
+          <ul class="footer-links">
+            <li>
+              <a
+                href="/experiment.html"
+                >Данные исследования QadamAlgo</a
+              >
+            </li>
+            <li>
+              <a
+                href="/videofix.html"
+                >Видеофиксация для дневника</a
+              >
+            </li>
+          </ul>
+          </div>
       </div>
       <div class="footer-bottom">
         <p>&copy; 2026 QadamAlgo. Все права защищены.</p>
@@ -518,6 +762,31 @@
         const timecodeItems = document.querySelectorAll(".timecode-item");
         const statWatchProgress = document.getElementById("statWatchProgress");
 
+        // Динамически внедряем оверлеи и зоны управления для мобильных устройств
+        const videoContainer = document.querySelector(".video-element-container");
+        
+        // Создаем центральный индикатор паузы/плей
+        const stateOverlay = document.createElement("div");
+        stateOverlay.className = "mobile-overlay-play-state";
+        stateOverlay.innerHTML = '<svg viewBox="0 0 24 24" id="overlayIcon"><path d="M8 5v14l11-7z"/></svg>';
+        videoContainer.appendChild(stateOverlay);
+        const overlayIcon = document.getElementById("overlayIcon");
+
+        // Левая зона двойного тапа (-5 сек)
+        const leftZone = document.createElement("div");
+        leftZone.className = "double-tap-zone double-tap-zone-left";
+        leftZone.innerHTML = '<div class="double-tap-ripple" id="leftRipple"><svg viewBox="0 0 24 24"><path d="M11.5 12l8.5 6V6l-8.5 6zm-9 6l8.5-6-8.5-6v12z"/></svg>5 сек</div>';
+        videoContainer.appendChild(leftZone);
+
+        // Правая зона двойного тапа (+5 сек)
+        const rightZone = document.createElement("div");
+        rightZone.className = "double-tap-zone double-tap-zone-right";
+        rightZone.innerHTML = '<div class="double-tap-ripple" id="rightRipple"><svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm8.5-6l8.5 6V6l-8.5 6z"/></svg>5 сек</div>';
+        videoContainer.appendChild(rightZone);
+
+        const leftRipple = document.getElementById("leftRipple");
+        const rightRipple = document.getElementById("rightRipple");
+
         // Форматирование времени (SS -> MM:SS)
         function formatTime(time) {
           let minutes = Math.floor(time / 60);
@@ -526,21 +795,131 @@
           return `${minutes}:${seconds}`;
         }
 
-        // Play / Pause
+        // Анимированный показ состояния плеера по центру
+        function triggerStateOverlay(isPlay) {
+          if (isPlay) {
+            overlayIcon.setAttribute("d", "M6 19h4V5H6v14zm8-14v14h4V5h-4z"); // Иконка паузы
+          } else {
+            overlayIcon.setAttribute("d", "M8 5v14l11-7z"); // Иконка плей
+          }
+          stateOverlay.classList.remove("animate-state");
+          void stateOverlay.offsetWidth; // Триггер перерисовки
+          stateOverlay.classList.add("animate-state");
+          setTimeout(() => {
+            stateOverlay.classList.remove("animate-state");
+          }, 400);
+        }
+
+        // Play / Pause с визуальным оверлеем
         function togglePlay() {
           if (video.paused) {
             video.play();
             playIcon.style.display = "none";
             pauseIcon.style.display = "block";
+            triggerStateOverlay(true);
           } else {
             video.pause();
             playIcon.style.display = "block";
             pauseIcon.style.display = "none";
+            triggerStateOverlay(false);
           }
+          showControlsTemporarily();
         }
 
         playPauseBtn.addEventListener("click", togglePlay);
-        video.addEventListener("click", togglePlay);
+
+        // Таймер автоскрытия панели управления
+        let controlsTimeout;
+        function showControlsTemporarily() {
+          playerWrapper.classList.remove("controls-hidden");
+          clearTimeout(controlsTimeout);
+          // Скрывать через 3 секунды, если видео воспроизводится
+          if (!video.paused) {
+            controlsTimeout = setTimeout(() => {
+              playerWrapper.classList.add("controls-hidden");
+            }, 3000);
+          }
+        }
+
+        // Показываем панель при движении мыши (для ПК) или тапе
+        playerWrapper.addEventListener("mousemove", showControlsTemporarily);
+        playerWrapper.addEventListener("click", showControlsTemporarily);
+
+        // Обработка одиночного тапа на видео для вызова управления и паузы на мобильных
+        let lastTapTime = 0;
+        
+        function handleVideoTap(e) {
+          const now = new Date().getTime();
+          const timespan = now - lastTapTime;
+          
+          if (timespan > 300) {
+            // Одиночный тап: переключаем видимость ползунка и кнопок
+            if (playerWrapper.classList.contains("controls-hidden")) {
+              playerWrapper.classList.remove("controls-hidden");
+              showControlsTemporarily();
+            } else {
+              // Если они уже видны — ставим на паузу/плей
+              togglePlay();
+            }
+          }
+          lastTapTime = now;
+        }
+
+        // Логика двойного тапа на смартфонах (в полноэкранном режиме)
+        leftZone.addEventListener("touchend", (e) => {
+          const now = new Date().getTime();
+          const timespan = now - lastTapTime;
+          if (timespan < 300 && timespan > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (document.fullscreenElement) {
+              video.currentTime = Math.max(0, video.currentTime - 5);
+              animateRipple(leftRipple);
+            }
+          } else {
+            handleVideoTap(e);
+          }
+          lastTapTime = now;
+        });
+
+        rightZone.addEventListener("touchend", (e) => {
+          const now = new Date().getTime();
+          const timespan = now - lastTapTime;
+          if (timespan < 300 && timespan > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (document.fullscreenElement) {
+              video.currentTime = Math.min(video.duration, video.currentTime + 5);
+              animateRipple(rightRipple);
+            }
+          } else {
+            handleVideoTap(e);
+          }
+          lastTapTime = now;
+        });
+
+        // Клик для ПК по всей области видео и зонам оверлея
+        video.addEventListener("click", (e) => {
+          togglePlay();
+        });
+        leftZone.addEventListener("click", (e) => {
+          // Игнорируем, если событие вызвано тачем (оно обработано в touchend)
+          if (e.pointerType === "touch" || e.detail === 0) return;
+          togglePlay();
+        });
+        rightZone.addEventListener("click", (e) => {
+          if (e.pointerType === "touch" || e.detail === 0) return;
+          togglePlay();
+        });
+
+        function animateRipple(rippleEl) {
+          rippleEl.style.opacity = "1";
+          rippleEl.style.transform = "scale(1)";
+          setTimeout(() => {
+            rippleEl.style.opacity = "0";
+            rippleEl.style.transform = "scale(0.5)";
+          }, 300);
+        }
 
         // Обновление прогресс-бара и таймеров
         video.addEventListener("timeupdate", (e) => {
@@ -551,14 +930,13 @@
             const progressPercent = (current / duration) * 100;
             progressBar.style.width = `${progressPercent}%`;
             currentTimeEl.textContent = formatTime(current);
-            
-            // Динамическое обновление фишки статистики
             statWatchProgress.textContent = `${Math.round(progressPercent)}%`;
-
-            // Подсветка активного таймкода по ходу воспроизведения
             updateActiveTimecode(current);
           }
         });
+
+        video.addEventListener("play", showControlsTemporarily);
+        video.addEventListener("pause", showControlsTemporarily);
 
         // Длительность видео при загрузке метаданных
         video.addEventListener("loadedmetadata", (e) => {
@@ -572,12 +950,15 @@
           const videoDuration = video.duration;
           if(videoDuration) {
             video.currentTime = (coordX / totalWidth) * videoDuration;
+            showControlsTemporarily();
           }
         });
 
-        // Горячие клавиши (Пробел - пауза, F - фуллскрин)
+        // Горячие клавиши (Пробел, F, и СТРЕЛОЧКИ вперед/назад на 5 сек)
         window.addEventListener("keydown", (e) => {
-          if (e.code === "Space" && document.activeElement !== volumeSlider) {
+          if (document.activeElement === volumeSlider) return;
+
+          if (e.code === "Space") {
             e.preventDefault();
             togglePlay();
           }
@@ -585,11 +966,29 @@
             e.preventDefault();
             toggleFullscreen();
           }
+          if (e.code === "ArrowLeft") {
+            e.preventDefault();
+            video.currentTime = Math.max(0, video.currentTime - 5);
+            showControlsTemporarily();
+          }
+          if (e.code === "ArrowRight") {
+            e.preventDefault();
+            video.currentTime = Math.min(video.duration, video.currentTime + 5);
+            showControlsTemporarily();
+          }
         });
 
         // Перемотка кнопками на 10 секунд
-        rewindBtn.addEventListener("click", () => video.currentTime -= 10);
-        forwardBtn.addEventListener("click", () => video.currentTime += 10);
+        rewindBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          video.currentTime -= 10;
+          showControlsTemporarily();
+        });
+        forwardBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          video.currentTime += 10;
+          showControlsTemporarily();
+        });
 
         // Управление звуком
         volumeSlider.addEventListener("input", (e) => {
@@ -598,7 +997,8 @@
           updateVolumeIcons();
         });
 
-        muteBtn.addEventListener("click", () => {
+        muteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
           video.muted = !video.muted;
           if (video.muted) {
             volumeSlider.value = 0;
@@ -627,10 +1027,14 @@
           } else {
             document.exitFullscreen();
           }
+          showControlsTemporarily();
         }
-        fullscreenBtn.addEventListener("click", toggleFullscreen);
+        fullscreenBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          toggleFullscreen();
+        });
 
-        // Интерактивная фишка: Переход по таймкодам
+        // Переход по таймкодам
         timecodeItems.forEach(item => {
           item.addEventListener("click", () => {
             const targetTime = parseInt(item.getAttribute("data-time"), 10);
@@ -638,6 +1042,7 @@
             if (video.paused) video.play();
             playIcon.style.display = "none";
             pauseIcon.style.display = "block";
+            showControlsTemporarily();
           });
         });
 
@@ -654,7 +1059,7 @@
           if(currentActive) currentActive.classList.add("active");
         }
 
-        // Логика бургер-меню хедера (поддержка адаптивности)
+        // Логика бургер-меню
         const hamburgerBtn = document.getElementById("hamburgerBtn");
         const mobileMenu = document.getElementById("mobileMenu");
         if (hamburgerBtn && mobileMenu) {
@@ -663,6 +1068,9 @@
             mobileMenu.classList.toggle("active");
           });
         }
+        
+        // Первичная инициализация панели управления
+        showControlsTemporarily();
       });
     </script>
   </body>
